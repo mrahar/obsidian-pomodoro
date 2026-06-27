@@ -50,9 +50,20 @@ var VIEW_TYPE = 'pomodoro-journal-view';
 var CIRC = 2 * Math.PI * 54;
 
 var SESSIONS = {
-    work:  { label: '🍅 کار ۲۵',      secs: 25*60 },
-    short: { label: '☕ استراحت ۵',    secs: 5*60  },
-    long:  { label: '🌿 استراحت ۱۵',  secs: 15*60 }
+    work:  { label: '🍅 کار'            },
+    short: { label: '☕ استراحت کوتاه'  },
+    long:  { label: '🌿 استراحت بلند'  }
+};
+
+var DEFAULT_SETTINGS = {
+    workDuration:    25,
+    shortBreak:      5,
+    longBreak:       15,
+    autoStartBreak:  false,
+    autoStartWork:   false,
+    bellOnComplete:  true,
+    autoLog:         true,
+    journalHeading:  '## 🍅 پومودورو‌های امروز'
 };
 
 var CATS = [
@@ -186,6 +197,7 @@ class PomodoroView extends obsidian.ItemView {
         // نوع سشن
         var sessRow = pane.createEl('div',{cls:'pj-sess-row'});
         self._sessBtns = {};
+        var sessDurations = { work: p.settings.workDuration, short: p.settings.shortBreak, long: p.settings.longBreak };
         Object.keys(SESSIONS).forEach(function(type){
             var btn = sessRow.createEl('button',{
                 text: SESSIONS[type].label,
@@ -196,11 +208,12 @@ class PomodoroView extends obsidian.ItemView {
                 if(p.state.running) return;
                 Object.values(self._sessBtns).forEach(function(b){ b.classList.remove('active'); });
                 btn.classList.add('active');
+                var dur = sessDurations[type] * 60;
                 p.state.type    = type;
-                p.state.total   = SESSIONS[type].secs;
-                p.state.secs    = SESSIONS[type].secs;
+                p.state.total   = dur;
+                p.state.secs    = dur;
                 p.state.elapsed = 0;
-                if(self._slider) self._slider.value = String(Math.round(SESSIONS[type].secs/60));
+                if(self._slider) self._slider.value = String(sessDurations[type]);
                 self.refresh();
             };
         });
@@ -283,7 +296,7 @@ class PomodoroView extends obsidian.ItemView {
         };
 
         // ثبت ۲۵ دقیقه کامل
-        var logFull = logRow.createEl('button',{text:'✅ ثبت ۲۵ دق کامل',cls:'pj-log-btn pj-log-full'});
+        var logFull = logRow.createEl('button',{text:'✅ ثبت ' + fa(String(p.settings.workDuration)) + ' دق کامل',cls:'pj-log-btn pj-log-full'});
         logFull.onclick = function(){
             p._logNow(true);
         };
@@ -512,11 +525,11 @@ class PomodoroPlugin extends obsidian.Plugin {
             running:false, paused:false, count:0
         };
 
-        // بازیابی state ذخیره‌شده از دیسک
+        // بازیابی داده‌های ذخیره‌شده از دیسک
         var saved = await this.loadData();
-        this.state = Object.assign({}, defaultState, saved || {});
-        // تنظیمات صدا — { soundId: { vol: 0.4, active: false } }
-        this.soundSettings = (saved && saved.sounds) ? saved.sounds : {};
+        this.settings     = Object.assign({}, DEFAULT_SETTINGS, (saved && saved.settings) || {});
+        this.state        = Object.assign({}, defaultState, (saved && saved.state) || {});
+        this.soundSettings = (saved && saved.sounds) || {};
 
         // اگه موقع بسته شدن، تایمر داشت اجرا می‌شد → زمان واقعی گذشته رو حساب کن
         if(this.state.running && !this.state.paused && this.state.startWall){
@@ -552,6 +565,8 @@ class PomodoroPlugin extends obsidian.Plugin {
 
         this.addCommand({ id:'pomo-open', name:'باز کردن پنل پومودورو', callback: function(){ self.openView(); } });
 
+        this.addSettingTab(new PomodoroSettingTab(this.app, this));
+
         console.log('🍅 Pomodoro Journal v2 loaded');
     }
 
@@ -567,23 +582,31 @@ class PomodoroPlugin extends obsidian.Plugin {
     }
 
     _saveState() {
-        // فقط فیلدهای لازم رو ذخیره کن
         this.saveData({
-            type:         this.state.type,
-            secs:         this.state.secs,
-            total:        this.state.total,
-            elapsed:      this.state.elapsed,
-            pausedElapsed:this.state.pausedElapsed,
-            startWall:    (this.state.running && !this.state.paused) ? Date.now() - (this.state.initSecs - this.state.secs) * 1000 : null,
-            initSecs:     this.state.secs,
-            task:         this.state.task,
-            project:      this.state.project,
-            cat:          this.state.cat,
-            running:      this.state.running,
-            paused:       this.state.paused,
-            count:        this.state.count,
-            sounds:       this.soundSettings || {}
+            settings: this.settings,
+            sounds:   this.soundSettings || {},
+            state: {
+                type:          this.state.type,
+                secs:          this.state.secs,
+                total:         this.state.total,
+                elapsed:       this.state.elapsed,
+                pausedElapsed: this.state.pausedElapsed,
+                startWall:     (this.state.running && !this.state.paused) ? Date.now() - (this.state.initSecs - this.state.secs) * 1000 : null,
+                initSecs:      this.state.secs,
+                task:          this.state.task,
+                project:       this.state.project,
+                cat:           this.state.cat,
+                running:       this.state.running,
+                paused:        this.state.paused,
+                count:         this.state.count,
+                startTimeStr:  this.state.startTimeStr
+            }
         });
+    }
+
+    async _saveSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, this.settings);
+        await this._saveState();
     }
 
     async openView() {
@@ -664,18 +687,38 @@ class PomodoroPlugin extends obsidian.Plugin {
     }
 
     _onTimerDone() {
-        // تایمر به صفر رسید — ثبت خودکار بدون مودال
         var self = this;
+        var cfg  = self.settings;
+        var wasWork  = self.state.type === 'work';
+        var wasBreak = self.state.type === 'short' || self.state.type === 'long';
+
         self.state.running = false;
-        self._bell();
-        new obsidian.Notice('🍅 پومودورو تموم شد!', 5000);
-        if(self.state.type === 'work'){
+        if(cfg.bellOnComplete) self._bell();
+
+        if(wasWork){
             self.state.count++;
+            new obsidian.Notice('🍅 سشن کاری تموم شد!', 5000);
             if(self.state.count % 4 === 0) new obsidian.Notice('🎉 ۴ پومودورو! وقت استراحت بلنده 🌿', 6000);
-            // ثبت خودکار — از توضیح موجود در اینپوت استفاده می‌کنه
-            self._logToJournal(self.state.task || 'بدون عنوان', self.state.total);
+            if(cfg.autoLog) self._logToJournal(self.state.task || 'بدون عنوان', self.state.total);
+        } else if(wasBreak){
+            new obsidian.Notice('☕ استراحت تموم شد! بریم سراغ کار 💪', 5000);
         }
+
         self.resetSession();
+
+        // شروع خودکار سشن بعدی
+        if(wasWork && cfg.autoStartBreak){
+            var breakType = (self.state.count % 4 === 0) ? 'long' : 'short';
+            self.state.type  = breakType;
+            self.state.total = cfg[breakType === 'long' ? 'longBreak' : 'shortBreak'] * 60;
+            self.state.secs  = self.state.total;
+            setTimeout(function(){ self.startSession(self.state.task, self.state.project, self.state.cat); }, 500);
+        } else if(wasBreak && cfg.autoStartWork){
+            self.state.type  = 'work';
+            self.state.total = cfg.workDuration * 60;
+            self.state.secs  = self.state.total;
+            setTimeout(function(){ self.startSession(self.state.task, self.state.project, self.state.cat); }, 500);
+        }
     }
 
     _logNow(logFull) {
@@ -778,7 +821,7 @@ class PomodoroPlugin extends obsidian.Plugin {
             // سطر جدید
             var timeStr = this.state.startTimeStr || nowTime();
             var newRow = '| ' + timeStr + ' | ' + catLabel + ' | ' + this.state.project + ' | ' + desc + ' | ' + dur + ' |';
-            var heading = '## 🍅 پومودورو‌های امروز';
+            var heading = this.settings.journalHeading || DEFAULT_SETTINGS.journalHeading;
 
             var lines = content.split('\n');
 
@@ -828,6 +871,146 @@ class PomodoroPlugin extends obsidian.Plugin {
             new obsidian.Notice('❌ خطا: ' + e.message, 5000);
             console.error('[Pomo] log error:', e);
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// صفحه‌ی تنظیمات
+// ─────────────────────────────────────────────────────────────
+
+class PomodoroSettingTab extends obsidian.PluginSettingTab {
+    constructor(app, plugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+
+    display() {
+        var p   = this.plugin;
+        var cfg = p.settings;
+        var el  = this.containerEl;
+        el.empty();
+        el.setAttribute('dir', 'rtl');
+
+        // ── تایمر ──
+        el.createEl('h3', {text: '⏱️ تایمر'});
+
+        new obsidian.Setting(el)
+            .setName('مدت سشن کاری')
+            .setDesc('به دقیقه — پیش‌فرض: ۲۵')
+            .addText(function(t){
+                t.inputEl.type = 'number';
+                t.inputEl.min  = '1';
+                t.inputEl.max  = '120';
+                t.setValue(String(cfg.workDuration));
+                t.onChange(async function(v){
+                    cfg.workDuration = Math.max(1, parseInt(v)||25);
+                    await p._saveSettings();
+                });
+            });
+
+        new obsidian.Setting(el)
+            .setName('مدت استراحت کوتاه')
+            .setDesc('به دقیقه — پیش‌فرض: ۵')
+            .addText(function(t){
+                t.inputEl.type = 'number';
+                t.inputEl.min  = '1';
+                t.inputEl.max  = '60';
+                t.setValue(String(cfg.shortBreak));
+                t.onChange(async function(v){
+                    cfg.shortBreak = Math.max(1, parseInt(v)||5);
+                    await p._saveSettings();
+                });
+            });
+
+        new obsidian.Setting(el)
+            .setName('مدت استراحت بلند')
+            .setDesc('به دقیقه — پیش‌فرض: ۱۵')
+            .addText(function(t){
+                t.inputEl.type = 'number';
+                t.inputEl.min  = '1';
+                t.inputEl.max  = '120';
+                t.setValue(String(cfg.longBreak));
+                t.onChange(async function(v){
+                    cfg.longBreak = Math.max(1, parseInt(v)||15);
+                    await p._saveSettings();
+                });
+            });
+
+        new obsidian.Setting(el)
+            .setName('شروع خودکار استراحت')
+            .setDesc('بعد از اتمام سشن کاری، استراحت رو خودکار شروع کن')
+            .addToggle(function(t){
+                t.setValue(cfg.autoStartBreak);
+                t.onChange(async function(v){
+                    cfg.autoStartBreak = v;
+                    await p._saveSettings();
+                });
+            });
+
+        new obsidian.Setting(el)
+            .setName('شروع خودکار سشن کاری')
+            .setDesc('بعد از اتمام استراحت، سشن کاری رو خودکار شروع کن')
+            .addToggle(function(t){
+                t.setValue(cfg.autoStartWork);
+                t.onChange(async function(v){
+                    cfg.autoStartWork = v;
+                    await p._saveSettings();
+                });
+            });
+
+        // ── ژورنال ──
+        el.createEl('h3', {text: '📓 ثبت در ژورنال'});
+
+        new obsidian.Setting(el)
+            .setName('ثبت خودکار پس از اتمام سشن')
+            .setDesc('وقتی تایمر تموم شد، بدون سوال در نت روزانه ثبت کنه')
+            .addToggle(function(t){
+                t.setValue(cfg.autoLog);
+                t.onChange(async function(v){
+                    cfg.autoLog = v;
+                    await p._saveSettings();
+                });
+            });
+
+        new obsidian.Setting(el)
+            .setName('عنوان بخش پومودورو در نت روزانه')
+            .setDesc('هدینگی که پلاگین دنبالش می‌گرده تا جدول رو پیدا کنه')
+            .addText(function(t){
+                t.setValue(cfg.journalHeading);
+                t.inputEl.style.width = '100%';
+                t.onChange(async function(v){
+                    cfg.journalHeading = v.trim() || DEFAULT_SETTINGS.journalHeading;
+                    await p._saveSettings();
+                });
+            });
+
+        // ── صدا ──
+        el.createEl('h3', {text: '🔔 صدا'});
+
+        new obsidian.Setting(el)
+            .setName('پخش bell هنگام اتمام سشن')
+            .setDesc('یه صدای آروم برای اعلام پایان هر سشن (کار یا استراحت)')
+            .addToggle(function(t){
+                t.setValue(cfg.bellOnComplete);
+                t.onChange(async function(v){
+                    cfg.bellOnComplete = v;
+                    await p._saveSettings();
+                });
+            });
+
+        // ── دکمه‌ی ریست ──
+        el.createEl('h3', {text: '⚙️ بازنشانی'});
+        new obsidian.Setting(el)
+            .setName('بازگشت به تنظیمات پیش‌فرض')
+            .setDesc('همه‌ی تنظیمات رو به مقدار اولیه برگردون')
+            .addButton(function(b){
+                b.setButtonText('ریست').setWarning();
+                b.onClick(async function(){
+                    p.settings = Object.assign({}, DEFAULT_SETTINGS);
+                    await p._saveSettings();
+                    new obsidian.Notice('✅ تنظیمات به پیش‌فرض برگشت', 3000);
+                });
+            });
     }
 }
 
