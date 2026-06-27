@@ -1,0 +1,10 @@
+{
+  "id": "pomodoro-journal",
+  "name": "پومودورو ژورنال",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "تایمر پومودورو با صدای محیطی و ثبت خودکار در ژورنال روزانه",
+  "author": "MR",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
