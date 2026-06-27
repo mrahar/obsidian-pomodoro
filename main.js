@@ -517,10 +517,11 @@ class PomodoroPlugin extends obsidian.Plugin {
     async onload() {
         var self = this;
 
-        // state پیش‌فرض
+        // state پیش‌فرض — از DEFAULT_SETTINGS می‌خونه نه از SESSIONS
+        var workSecs = DEFAULT_SETTINGS.workDuration * 60;
         var defaultState = {
-            type:'work', secs:SESSIONS.work.secs, total:SESSIONS.work.secs,
-            elapsed:0, pausedElapsed:0, startWall:null, initSecs:SESSIONS.work.secs,
+            type:'work', secs:workSecs, total:workSecs,
+            elapsed:0, pausedElapsed:0, startWall:null, initSecs:workSecs,
             task:'', project:'', cat:'مطالعه-کتاب',
             running:false, paused:false, count:0
         };
