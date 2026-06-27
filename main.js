@@ -95,6 +95,13 @@ var SOUNDS = [
 ];
 
 // ─────────────────────────────────────────────────────────────
+// ثابت‌های SVG — کش برای جلوگیری از DOM rebuild در هر refresh
+// ─────────────────────────────────────────────────────────────
+
+var SVG_PLAY  = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>';
+var SVG_PAUSE = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+// ─────────────────────────────────────────────────────────────
 // مودال ثبت
 // ─────────────────────────────────────────────────────────────
 
@@ -255,6 +262,7 @@ class PomodoroView extends obsidian.ItemView {
         var dotsWrap = pane.createEl('div',{cls:'pj-dots'});
         for(var di=0; di<4; di++) dotsWrap.createEl('span',{cls:'pj-dot'});
         self._dotsEl = dotsWrap;
+        self._dots   = Array.from(dotsWrap.querySelectorAll('.pj-dot'));
 
         // ── ورودی‌ها ──
         var formCard = pane.createEl('div',{cls:'pj-form-card'});
@@ -314,6 +322,7 @@ class PomodoroView extends obsidian.ItemView {
         var logElapsed = bottomRow.createEl('button',{cls:'pj-log-btn pj-log-elapsed'});
         logElapsed.innerHTML = '⏱ ثبت <span class="pj-elapsed-txt">۰</span> دق';
         self._logElapsedBtn = logElapsed;
+        self._elapsedSpan   = logElapsed.querySelector('.pj-elapsed-txt');
         logElapsed.onclick = function(){
             if(p.state.elapsed < 60){ new obsidian.Notice('کمتر از ۱ دقیقه گذشته!',3000); return; }
             p._logNow(false);
@@ -321,6 +330,13 @@ class PomodoroView extends obsidian.ItemView {
 
         var logFull = bottomRow.createEl('button',{text:'✓ ثبت کامل',cls:'pj-log-btn pj-log-full'});
         logFull.onclick = function(){ p._logNow(true); };
+        self._logFullBtn = logFull;
+
+        // ── دکمه‌ی رد استراحت — فقط در حالت break نمایش داده می‌شه ──
+        var skipBreakBtn = pane.createEl('button',{text:'⏭ رد کردن استراحت  ←  شروع کار',cls:'pj-skip-break-btn'});
+        skipBreakBtn.style.display = 'none';
+        self._skipBreakBtn = skipBreakBtn;
+        skipBreakBtn.onclick = function(){ p.skipBreak(); };
     }
 
     _buildSounds(pane) {
@@ -481,35 +497,54 @@ class PomodoroView extends obsidian.ItemView {
                 } else {
                     p.soundSettings[s.id] = { vol: v, active: false };
                 }
-                p._saveState();
+                // debounce: حین کشیدن اسلایدر هر ms صدا زده می‌شه — ذخیره‌ی فوری لازم نیست
+                p._debouncedSave();
             };
         });
     }
 
-    // ── آپدیت کامل نمایش ──
-    refresh() {
+    // ── به‌روزرسانی سبک — فقط نمایش زمان (هر ثانیه یک‌بار) ──
+    _tickUI() {
         var p = this.plugin, st = p.state;
         var m = Math.floor(st.secs/60), s = st.secs%60;
         var txt = fa(String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'));
 
         if(this._timeTxt) this._timeTxt.textContent = txt;
 
-        // ring progress — از _ringCirc استفاده می‌کنه اگه موجود باشه
         if(this._ringFg){
             var circ = this._ringCirc || CIRC;
             this._ringFg.style.strokeDashoffset = circ * (1 - st.secs / Math.max(st.total, 1));
         }
 
-        if(this._slider && !this._slider.matches(':active'))
-            this._slider.value = String(Math.round(st.secs/60));
+        if(this._elapsedSpan){
+            var em = Math.floor(st.elapsed/60);
+            this._elapsedSpan.textContent = fa(String(em||0));
+            this._logElapsedBtn.style.opacity = (st.elapsed >= 60) ? '1' : '0.4';
+        }
 
-        // آیکن دکمه‌ی play
+        if(this._slider && !this._slider.matches(':active')){
+            this._slider.value = String(Math.round(st.secs/60));
+            if(this._sliderVal)
+                this._sliderVal.textContent = fa(String(Math.round(st.secs/60))) + ' دق';
+        }
+    }
+
+    // ── آپدیت کامل نمایش — هنگام تغییر state (شروع/مکث/ریست) ──
+    refresh() {
+        var p = this.plugin, st = p.state;
+
+        // به‌روزرسانی زمان
+        this._tickUI();
+
+        // آیکن دکمه‌ی play — فقط اگه state عوض شده (جلوگیری از innerHTML بی‌دلیل)
         if(this._startBtn){
             var isPlaying = st.running && !st.paused;
-            this._startBtn.innerHTML = isPlaying
-                ? '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
-                : '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>';
-            this._startBtn.classList.toggle('pj-play-btn--paused', !isPlaying && st.paused);
+            if(this._lastIsPlaying !== isPlaying || this._lastPausedState !== st.paused){
+                this._startBtn.innerHTML = isPlaying ? SVG_PAUSE : SVG_PLAY;
+                this._startBtn.classList.toggle('pj-play-btn--paused', !isPlaying && st.paused);
+                this._lastIsPlaying   = isPlaying;
+                this._lastPausedState = st.paused;
+            }
         }
 
         // وضعیت
@@ -520,28 +555,20 @@ class PomodoroView extends obsidian.ItemView {
                 : 'استراحت...';
         }
 
-        // زمان گذشته
-        if(this._logElapsedBtn){
-            var em = Math.floor(st.elapsed/60);
-            var eSpan = this._logElapsedBtn.querySelector('.pj-elapsed-txt');
-            if(eSpan) eSpan.textContent = fa(String(em||0));
-            this._logElapsedBtn.style.opacity = (st.elapsed >= 60) ? '1' : '0.4';
-        }
-
-        // نقاط
-        if(this._dotsEl){
+        // نقاط — از آرایه‌ی کش‌شده استفاده می‌کنه
+        if(this._dots){
             var n = st.count === 0 ? 0 : (st.count % 4 || 4);
-            this._dotsEl.querySelectorAll('.pj-dot').forEach(function(d, i){
-                d.classList.toggle('filled', i < n);
-            });
+            this._dots.forEach(function(d, i){ d.classList.toggle('filled', i < n); });
         }
-
-        // slider value label
-        if(this._sliderVal && this._slider && !this._slider.matches(':active'))
-            this._sliderVal.textContent = fa(String(Math.round(st.secs/60))) + ' دق';
 
         // رنگ بر اساس نوع سشن
         if(this._timerPane) this._timerPane.dataset.type = st.type || 'work';
+
+        // دکمه‌ی رد استراحت ↔ دکمه‌های ثبت — فقط یکی نمایش داده می‌شه
+        var isBreak = (st.type === 'short' || st.type === 'long');
+        if(this._skipBreakBtn)  this._skipBreakBtn.style.display  = isBreak ? '' : 'none';
+        if(this._logElapsedBtn) this._logElapsedBtn.style.display = isBreak ? 'none' : '';
+        if(this._logFullBtn)    this._logFullBtn.style.display    = isBreak ? 'none' : '';
 
         // اینپوت‌ها
         if(this._taskIn && document.activeElement !== this._taskIn)
@@ -551,6 +578,28 @@ class PomodoroView extends obsidian.ItemView {
         if(this._catSel && st.cat)
             this._catSel.value = st.cat;
     }
+}
+
+// ─────────────────────────────────────────────────────────────
+// زمان‌بندی هوشمند — دقیقاً یه‌بار در ثانیه، روی مرز ثانیه
+// ─────────────────────────────────────────────────────────────
+
+function scheduleNextTick(plugin) {
+    // محاسبه‌ی ms تا مرز ثانیه‌ی بعدی (حداقل ۱۰ms برای جلوگیری از fire زودهنگام)
+    var ms = 1000 - (Date.now() % 1000);
+    if(ms < 10) ms += 1000;
+    plugin._timer = setTimeout(function() {
+        if(!plugin.state.running || plugin.state.paused) return;
+        var wallElapsed = Math.floor((Date.now() - plugin.state.startWall) / 1000);
+        plugin.state.secs    = Math.max(0, plugin.state.initSecs - wallElapsed);
+        plugin.state.elapsed = plugin.state.pausedElapsed + wallElapsed;
+        if(plugin.state.secs <= 0){
+            plugin._onTimerDone();
+            return;
+        }
+        if(plugin.view) plugin.view._tickUI();
+        scheduleNextTick(plugin);
+    }, ms);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -619,8 +668,9 @@ class PomodoroPlugin extends obsidian.Plugin {
     onunload() {
         // state فعلی رو روی دیسک ذخیره کن
         this._saveState();
+        if(this._saveDebounceTimer) clearTimeout(this._saveDebounceTimer);
         this.app.workspace.detachLeavesOfType(VIEW_TYPE);
-        if(this._timer) clearInterval(this._timer);
+        if(this._timer) clearTimeout(this._timer);
         var self = this;
         Object.keys(this.audios).forEach(function(id){
             try{ self.audios[id].pause(); }catch(e){}
@@ -655,6 +705,13 @@ class PomodoroPlugin extends obsidian.Plugin {
         await this._saveState();
     }
 
+    // ذخیره‌ی debounce‌شده — برای callbackهایی که سریع و پشت‌سرهم صدا زده می‌شن (مثل volume slider)
+    _debouncedSave() {
+        var self = this;
+        if(self._saveDebounceTimer) clearTimeout(self._saveDebounceTimer);
+        self._saveDebounceTimer = setTimeout(function(){ self._saveState(); }, 300);
+    }
+
     async openView() {
         var ws = this.app.workspace;
         var leaves = ws.getLeavesOfType(VIEW_TYPE);
@@ -681,26 +738,15 @@ class PomodoroPlugin extends obsidian.Plugin {
             var _n = new Date();
             self.state.startTimeStr = fa(String(_n.getHours()).padStart(2,'0') + ':' + String(_n.getMinutes()).padStart(2,'0'));
         }
-        if(self._timer) clearInterval(self._timer);
-        // هر ۵۰۰ms چک می‌کنیم تا هنگام inactive بودن تب هم دقیق باشه
-        // یه‌بار موقع شروع ذخیره کن — همین کافیه
+        if(self._timer) clearTimeout(self._timer);
+        // یه‌بار موقع شروع ذخیره کن، بعد هر ثانیه یه tick دقیق روی مرز ثانیه
         self._saveState();
-        self._timer = setInterval(function(){
-            var wallElapsed = Math.floor((Date.now() - self.state.startWall) / 1000);
-            self.state.secs    = Math.max(0, self.state.initSecs - wallElapsed);
-            self.state.elapsed = self.state.pausedElapsed + wallElapsed;
-            if(self.state.secs <= 0){
-                clearInterval(self._timer);
-                self._onTimerDone();
-                return;
-            }
-            if(self.view) self.view.refresh();
-        }, 500);
+        scheduleNextTick(self);
         if(self.view) self.view.refresh();
     }
 
     pauseSession() {
-        clearInterval(this._timer);
+        clearTimeout(this._timer);
         // زمان واقعی گذشته رو ذخیره کن
         var wallElapsed = Math.floor((Date.now() - this.state.startWall) / 1000);
         this.state.secs          = Math.max(0, this.state.initSecs - wallElapsed);
@@ -718,7 +764,7 @@ class PomodoroPlugin extends obsidian.Plugin {
     }
 
     resetSession() {
-        clearInterval(this._timer);
+        clearTimeout(this._timer);
         // task، project و cat حفظ می‌شن تا سشن بعدی نیازی به تایپ مجدد نباشه
         this.state.running       = false;
         this.state.paused        = false;
@@ -767,13 +813,43 @@ class PomodoroPlugin extends obsidian.Plugin {
         }
     }
 
+    skipBreak() {
+        clearTimeout(this._timer);
+        this._timer = null;
+        var workSecs = this.settings.workDuration * 60;
+        this.state.type          = 'work';
+        this.state.total         = workSecs;
+        this.state.secs          = workSecs;
+        this.state.elapsed       = 0;
+        this.state.pausedElapsed = 0;
+        this.state.startWall     = null;
+        this.state.initSecs      = workSecs;
+        this.state.startTimeStr  = null;
+        this.state.running       = false;
+        this.state.paused        = false;
+        // آپدیت pill به حالت «کار»
+        if(this.view && this.view._sessBtns){
+            var btns = this.view._sessBtns;
+            Object.values(btns).forEach(function(b){ b.classList.remove('active'); });
+            if(btns.work) btns.work.classList.add('active');
+        }
+        // آپدیت اسلایدر به مدت سشن کاری
+        if(this.view && this.view._slider){
+            this.view._slider.value = String(this.settings.workDuration);
+            if(this.view._sliderVal)
+                this.view._sliderVal.textContent = fa(String(this.settings.workDuration)) + ' دق';
+        }
+        // شروع خودکار سشن کاری
+        this.startSession(this.state.task, this.state.project, this.state.cat);
+    }
+
     _logNow(logFull) {
         // دکمه‌های دستی — بدون مودال، مستقیم ثبت می‌کنه
         var self = this;
         var elapsedMin = Math.max(1, Math.floor(self.state.elapsed / 60));
         var secs = logFull ? self.state.total : (elapsedMin * 60);
         self._logToJournal(self.state.task || 'بدون عنوان', secs);
-        clearInterval(self._timer);
+        clearTimeout(self._timer);
         self.state.running = false;
         if(self.view) self.view.refresh();
     }

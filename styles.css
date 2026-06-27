@@ -531,3 +531,24 @@
 .pj-cat-add-btn:hover {
     background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
 }
+
+/* ══ دکمه‌ی رد استراحت ══ */
+.pj-skip-break-btn {
+    width: 100%;
+    background: color-mix(in srgb, var(--pj-accent) 10%, var(--pj-card));
+    border: 1.5px solid var(--pj-accent);
+    border-radius: 50px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--pj-accent);
+    cursor: pointer;
+    text-align: center;
+    transition: background .18s, transform .12s;
+    letter-spacing: .2px;
+}
+.pj-skip-break-btn:hover {
+    background: color-mix(in srgb, var(--pj-accent) 20%, var(--pj-card));
+}
+.pj-skip-break-btn:active { transform: scale(.97); }
