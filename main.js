@@ -55,18 +55,7 @@ var SESSIONS = {
     long:  { label: '🌿 استراحت بلند'  }
 };
 
-var DEFAULT_SETTINGS = {
-    workDuration:    25,
-    shortBreak:      5,
-    longBreak:       15,
-    autoStartBreak:  false,
-    autoStartWork:   false,
-    bellOnComplete:  true,
-    autoLog:         true,
-    journalHeading:  '## 🍅 پومودورو‌های امروز'
-};
-
-var CATS = [
+var DEFAULT_CATEGORIES = [
     { v:'مطالعه-کتاب',    l:'📖 مطالعه کتاب'      },
     { v:'دوره-ویدئویی',   l:'🎬 دوره ویدئویی'     },
     { v:'فیلم-سریال',     l:'🎥 فیلم / سریال'     },
@@ -80,6 +69,18 @@ var CATS = [
     { v:'برنامه‌ریزی',    l:'🗂️ برنامه‌ریزی'      },
     { v:'دیگر',           l:'📌 دیگر'              }
 ];
+
+var DEFAULT_SETTINGS = {
+    workDuration:    25,
+    shortBreak:      5,
+    longBreak:       15,
+    autoStartBreak:  false,
+    autoStartWork:   false,
+    bellOnComplete:  true,
+    autoLog:         true,
+    journalHeading:  '## 🍅 پومودورو‌های امروز',
+    categories:      null   // null یعنی از DEFAULT_CATEGORIES استفاده کن
+};
 
 var SOUNDS = [
     {id:'rain',        l:'🌧️ باران'    },
@@ -220,20 +221,21 @@ class PomodoroView extends obsidian.ItemView {
 
         // ورودی موضوع (قابل ویرایش حین سشن)
         var taskIn = pane.createEl('input',{cls:'pj-input'});
-        taskIn.type='text'; taskIn.placeholder='چیکار میکنی؟ (قابل تغییر حین سشن)';
+        taskIn.type='text'; taskIn.placeholder='چیکار میکنی؟';
         taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, projIn.value, catSel.value); };
         taskIn.oninput = function(){ p.state.task = taskIn.value.trim()||'بدون عنوان'; };
         self._taskIn = taskIn;
 
         // ورودی پروژه
         var projIn = pane.createEl('input',{cls:'pj-input pj-proj'});
-        projIn.type='text'; projIn.placeholder='🎯 پروژه: مثلاً GIT، پارت الکتریک';
+        projIn.type='text'; projIn.placeholder='🎯 پروژه (اختیاری)';
         projIn.oninput = function(){ p.state.project = projIn.value.trim()||'—'; };
         self._projIn = projIn;
 
         // دسته‌بندی
         var catSel = pane.createEl('select',{cls:'pj-select'});
-        CATS.forEach(function(c){
+        var activeCats = (p.settings.categories && p.settings.categories.length) ? p.settings.categories : DEFAULT_CATEGORIES;
+        activeCats.forEach(function(c){
             var o = catSel.createEl('option',{text:c.l}); o.value=c.v;
         });
         catSel.onchange = function(){ p.state.cat = catSel.value; };
@@ -814,9 +816,10 @@ class PomodoroPlugin extends obsidian.Plugin {
             var dur     = fa(String(durMin));
 
             // لیبل دسته‌بندی (با ایموجی)
+            var activeCats = (this.settings.categories && this.settings.categories.length) ? this.settings.categories : DEFAULT_CATEGORIES;
             var catLabel = this.state.cat;
-            for(var ci = 0; ci < CATS.length; ci++){
-                if(CATS[ci].v === this.state.cat){ catLabel = CATS[ci].l; break; }
+            for(var ci = 0; ci < activeCats.length; ci++){
+                if(activeCats[ci].v === this.state.cat){ catLabel = activeCats[ci].l; break; }
             }
 
             // سطر جدید
@@ -999,16 +1002,86 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        // ── دکمه‌ی ریست ──
+        // ── دسته‌بندی‌ها ──
+        el.createEl('h3', {text: '📋 دسته‌بندی‌ها'});
+        el.createEl('p', {
+            text: 'دسته‌هایی که توی منوی کشویی تایمر نشون داده می‌شن. می‌تونی ویرایش، حذف یا اضافه کنی.',
+            cls: 'setting-item-description'
+        });
+
+        if(!p.settings.categories || !p.settings.categories.length){
+            p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({}, c); });
+        }
+
+        var catList = el.createEl('div', {cls:'pj-cat-list'});
+
+        function renderCatList() {
+            catList.empty();
+            p.settings.categories.forEach(function(cat, idx){
+                var row = catList.createEl('div', {cls:'pj-cat-row'});
+
+                var labelInp = row.createEl('input', {cls:'pj-cat-label-inp'});
+                labelInp.value = cat.l;
+                labelInp.placeholder = 'مثلاً 📖 مطالعه کتاب';
+                labelInp.onchange = async function(){
+                    cat.l = labelInp.value.trim() || cat.l;
+                    await p._saveSettings();
+                };
+
+                var delBtn = row.createEl('button', {text:'🗑️', cls:'pj-cat-del-btn'});
+                delBtn.title = 'حذف این دسته';
+                delBtn.onclick = async function(){
+                    p.settings.categories.splice(idx, 1);
+                    await p._saveSettings();
+                    renderCatList();
+                };
+            });
+
+            // دکمه‌ی افزودن
+            var addRow = catList.createEl('div', {cls:'pj-cat-add-row'});
+            var addInp = addRow.createEl('input', {cls:'pj-cat-label-inp'});
+            addInp.placeholder = '+ دسته‌ی جدید (مثلاً 🎮 بازی)';
+            var addBtn = addRow.createEl('button', {text:'افزودن', cls:'pj-cat-add-btn'});
+            addBtn.onclick = async function(){
+                var label = addInp.value.trim();
+                if(!label) return;
+                var val = label.replace(/\s+/g,'-').replace(/[^\w؀-ۿ\-]/g,'') || ('cat-' + Date.now());
+                p.settings.categories.push({ v: val, l: label });
+                await p._saveSettings();
+                addInp.value = '';
+                renderCatList();
+            };
+            addInp.onkeydown = function(e){ if(e.key === 'Enter') addBtn.click(); };
+        }
+
+        renderCatList();
+
+        new obsidian.Setting(el)
+            .setName('بازگشت به دسته‌های پیش‌فرض')
+            .setDesc('لیست دسته‌بندی‌ها رو به حالت اولیه برگردون')
+            .addButton(function(b){
+                b.setButtonText('ریست دسته‌ها').setWarning();
+                b.onClick(async function(){
+                    p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({}, c); });
+                    await p._saveSettings();
+                    renderCatList();
+                    new obsidian.Notice('✅ دسته‌بندی‌ها به پیش‌فرض برگشت', 3000);
+                });
+            });
+
+        // ── دکمه‌ی ریست کل تنظیمات ──
         el.createEl('h3', {text: '⚙️ بازنشانی'});
         new obsidian.Setting(el)
             .setName('بازگشت به تنظیمات پیش‌فرض')
-            .setDesc('همه‌ی تنظیمات رو به مقدار اولیه برگردون')
+            .setDesc('همه‌ی تنظیمات (شامل دسته‌بندی‌ها) رو به مقدار اولیه برگردون')
             .addButton(function(b){
-                b.setButtonText('ریست').setWarning();
+                b.setButtonText('ریست کامل').setWarning();
                 b.onClick(async function(){
-                    p.settings = Object.assign({}, DEFAULT_SETTINGS);
+                    p.settings = Object.assign({}, DEFAULT_SETTINGS, {
+                        categories: DEFAULT_CATEGORIES.map(function(c){ return Object.assign({}, c); })
+                    });
                     await p._saveSettings();
+                    renderCatList();
                     new obsidian.Notice('✅ تنظیمات به پیش‌فرض برگشت', 3000);
                 });
             });
