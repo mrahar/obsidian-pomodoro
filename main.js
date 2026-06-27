@@ -171,12 +171,12 @@ class PomodoroView extends obsidian.ItemView {
         // ── تب‌بار ──
         var tabBar = root.createEl('div',{cls:'pj-tabbar'});
         var tBtns = {
-            timer: tabBar.createEl('button',{text:'⏱️ تایمر', cls:'pj-tb active'}),
-            sound: tabBar.createEl('button',{text:'🎵 صدا',  cls:'pj-tb'})
+            timer: tabBar.createEl('button',{text:'تایمر', cls:'pj-tb active'}),
+            sound: tabBar.createEl('button',{text:'صدا',  cls:'pj-tb'})
         };
         var panes = {
             timer: root.createEl('div',{cls:'pj-pane'}),
-            sound: root.createEl('div',{cls:'pj-pane'})
+            sound: root.createEl('div',{cls:'pj-pane pj-pane-sound'})
         };
         panes.sound.style.display = 'none';
 
@@ -194,11 +194,13 @@ class PomodoroView extends obsidian.ItemView {
 
     _buildTimer(pane) {
         var self = this, p = this.plugin;
+        self._timerPane = pane;
+        pane.dataset.type = p.state.type || 'work';
 
-        // نوع سشن
+        // ── نوع سشن (pills) ──
+        var sessDurations = { work: p.settings.workDuration, short: p.settings.shortBreak, long: p.settings.longBreak };
         var sessRow = pane.createEl('div',{cls:'pj-sess-row'});
         self._sessBtns = {};
-        var sessDurations = { work: p.settings.workDuration, short: p.settings.shortBreak, long: p.settings.longBreak };
         Object.keys(SESSIONS).forEach(function(type){
             var btn = sessRow.createEl('button',{
                 text: SESSIONS[type].label,
@@ -210,102 +212,115 @@ class PomodoroView extends obsidian.ItemView {
                 Object.values(self._sessBtns).forEach(function(b){ b.classList.remove('active'); });
                 btn.classList.add('active');
                 var dur = sessDurations[type] * 60;
-                p.state.type    = type;
-                p.state.total   = dur;
-                p.state.secs    = dur;
-                p.state.elapsed = 0;
+                p.state.type  = type; p.state.total = dur;
+                p.state.secs  = dur;  p.state.elapsed = 0;
+                pane.dataset.type = type;
                 if(self._slider) self._slider.value = String(sessDurations[type]);
                 self.refresh();
             };
         });
 
-        // ورودی موضوع (قابل ویرایش حین سشن)
-        var taskIn = pane.createEl('input',{cls:'pj-input'});
-        taskIn.type='text'; taskIn.placeholder='چیکار میکنی؟';
-        taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, projIn.value, catSel.value); };
-        taskIn.oninput = function(){ p.state.task = taskIn.value.trim()||'بدون عنوان'; };
-        self._taskIn = taskIn;
+        // ── وضعیت ──
+        var statusEl = pane.createEl('div',{cls:'pj-status', text:'آماده'});
+        self._statusEl = statusEl;
 
-        // ورودی پروژه
-        var projIn = pane.createEl('input',{cls:'pj-input pj-proj'});
-        projIn.type='text'; projIn.placeholder='🎯 پروژه (اختیاری)';
-        projIn.oninput = function(){ p.state.project = projIn.value.trim()||'—'; };
-        self._projIn = projIn;
-
-        // دسته‌بندی
-        var catSel = pane.createEl('select',{cls:'pj-select'});
-        var activeCats = (p.settings.categories && p.settings.categories.length) ? p.settings.categories : DEFAULT_CATEGORIES;
-        activeCats.forEach(function(c){
-            var o = catSel.createEl('option',{text:c.l}); o.value=c.v;
-        });
-        catSel.onchange = function(){ p.state.cat = catSel.value; };
-        self._catSel = catSel;
-
-        // ── حلقه‌ی SVG ──
+        // ── حلقه‌ی SVG + تایمر بزرگ ──
         var ringWrap = pane.createEl('div',{cls:'pj-ring-wrap'});
-        ringWrap.innerHTML = '<svg class="pj-ring-svg" viewBox="0 0 120 120"><circle class="pj-ring-bg" cx="60" cy="60" r="54"/><circle class="pj-ring-fg" cx="60" cy="60" r="54"/></svg><div class="pj-time-txt">۲۵:۰۰</div>';
+        ringWrap.innerHTML =
+            '<svg class="pj-ring-svg" viewBox="0 0 200 200">'
+            + '<circle class="pj-ring-bg" cx="100" cy="100" r="90"/>'
+            + '<circle class="pj-ring-fg" cx="100" cy="100" r="90"/>'
+            + '</svg>'
+            + '<div class="pj-ring-center">'
+            + '<div class="pj-time-txt">۲۵:۰۰</div>'
+            + '</div>';
         self._ringFg  = ringWrap.querySelector('.pj-ring-fg');
         self._timeTxt = ringWrap.querySelector('.pj-time-txt');
-        self._ringFg.style.strokeDasharray  = CIRC;
+        var newCirc = 2 * Math.PI * 90;
+        self._ringFg.style.strokeDasharray  = newCirc;
         self._ringFg.style.strokeDashoffset = 0;
+        self._ringCirc = newCirc;
 
-        // ── اسلایدر زمان (زیر حلقه) ──
-        var sliderRow = pane.createEl('div',{cls:'pj-slider-row'});
-        sliderRow.createEl('span',{text:'۱',cls:'pj-slider-min'});
-        var slider = sliderRow.createEl('input');
-        slider.type='range'; slider.className='pj-time-slider';
-        slider.min='1'; slider.max='60'; slider.value='25';
-        sliderRow.createEl('span',{text:'۶۰',cls:'pj-slider-max'});
-        self._slider = slider;
-
-        slider.oninput = function(){
-            var newSecs = parseInt(slider.value)*60;
-            if(p.state.running){
-                // حین سشن: فقط زمان باقی‌مانده رو تغییر میده
-                p.state.secs  = newSecs;
-                p.state.total = p.state.elapsed + newSecs;
-            } else {
-                p.state.secs  = newSecs;
-                p.state.total = newSecs;
-                p.state.elapsed = 0;
-            }
-            self.refresh();
-        };
-
-        // ── دکمه‌ی اصلی ──
-        var ctrlRow = pane.createEl('div',{cls:'pj-ctrl-row'});
-        var startBtn = ctrlRow.createEl('button',{text:'▶ شروع',cls:'pj-start-btn'});
-        self._startBtn = startBtn;
-        startBtn.onclick = function(){
+        // ── دکمه‌ی play (زیر حلقه) ──
+        var playBtn = pane.createEl('button',{cls:'pj-play-btn'});
+        playBtn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>';
+        self._startBtn = playBtn;
+        playBtn.onclick = function(){
             if(!p.state.running)    p.startSession(taskIn.value, projIn.value, catSel.value);
             else if(p.state.paused) p.resumeSession();
             else                    p.pauseSession();
         };
-        var resetBtn = ctrlRow.createEl('button',{text:'↺',cls:'pj-reset-btn'});
-        resetBtn.title='ریست';
-        resetBtn.onclick = function(){ p.resetSession(); };
 
-        // ── دکمه‌های ثبت زودهنگام ──
-        var logRow = pane.createEl('div',{cls:'pj-log-row'});
+        // ── نقاط سشن ──
+        var dotsWrap = pane.createEl('div',{cls:'pj-dots'});
+        for(var di=0; di<4; di++) dotsWrap.createEl('span',{cls:'pj-dot'});
+        self._dotsEl = dotsWrap;
 
-        // ثبت زمان واقعی گذشته
-        var logElapsed = logRow.createEl('button',{cls:'pj-log-btn pj-log-elapsed'});
-        logElapsed.innerHTML = '⏱️ ثبت <span class="pj-elapsed-txt">۰</span> دق گذشته';
+        // ── ورودی‌ها ──
+        var formCard = pane.createEl('div',{cls:'pj-form-card'});
+
+        // ۱. نوع کار
+        var catField = formCard.createEl('div',{cls:'pj-field'});
+        catField.createEl('label',{text:'نوع کار', cls:'pj-field-label'});
+        var catSel = catField.createEl('select',{cls:'pj-field-select'});
+        var activeCats = (p.settings.categories && p.settings.categories.length) ? p.settings.categories : DEFAULT_CATEGORIES;
+        activeCats.forEach(function(c){ var o=catSel.createEl('option',{text:c.l}); o.value=c.v; });
+        catSel.onchange = function(){ p.state.cat = catSel.value; };
+        self._catSel = catSel;
+
+        // ۲. پروژه
+        var projField = formCard.createEl('div',{cls:'pj-field'});
+        projField.createEl('label',{text:'پروژه', cls:'pj-field-label'});
+        var projIn = projField.createEl('input',{cls:'pj-field-input'});
+        projIn.type='text'; projIn.placeholder='نام پروژه (اختیاری)';
+        projIn.oninput = function(){ p.state.project = projIn.value.trim()||'—'; };
+        self._projIn = projIn;
+
+        // ۳. توضیحات
+        var taskField = formCard.createEl('div',{cls:'pj-field pj-field--last'});
+        taskField.createEl('label',{text:'توضیحات', cls:'pj-field-label'});
+        var taskIn = taskField.createEl('input',{cls:'pj-field-input'});
+        taskIn.type='text'; taskIn.placeholder='این سشن رو در یه جمله توضیح بده...';
+        taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, projIn.value, catSel.value); };
+        taskIn.oninput = function(){ p.state.task = taskIn.value.trim()||'—'; };
+        self._taskIn = taskIn;
+
+        // ── اسلایدر زمان ──
+        var sliderWrap = formCard.createEl('div',{cls:'pj-field pj-field--slider'});
+        sliderWrap.createEl('label',{text:'مدت سشن', cls:'pj-field-label'});
+        var sliderRow = sliderWrap.createEl('div',{cls:'pj-slider-row'});
+        sliderRow.createEl('span',{text:'۱',cls:'pj-slider-lbl'});
+        var slider = sliderRow.createEl('input');
+        slider.type='range'; slider.className='pj-time-slider';
+        slider.min='1'; slider.max='60'; slider.value='25';
+        var sliderVal = sliderRow.createEl('span',{cls:'pj-slider-lbl pj-slider-val'});
+        sliderVal.textContent = fa('25') + ' دق';
+        self._slider = slider; self._sliderVal = sliderVal;
+        slider.oninput = function(){
+            var newSecs = parseInt(slider.value)*60;
+            sliderVal.textContent = fa(slider.value) + ' دق';
+            if(p.state.running){ p.state.secs=newSecs; p.state.total=p.state.elapsed+newSecs; }
+            else { p.state.secs=newSecs; p.state.total=newSecs; p.state.elapsed=0; }
+            self.refresh();
+        };
+
+        // ── ردیف پایین: ریست + log ──
+        var bottomRow = pane.createEl('div',{cls:'pj-bottom-row'});
+
+        var resetBtn = bottomRow.createEl('button',{cls:'pj-icon-btn'});
+        resetBtn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
+        resetBtn.title='ریست'; resetBtn.onclick = function(){ p.resetSession(); };
+
+        var logElapsed = bottomRow.createEl('button',{cls:'pj-log-btn pj-log-elapsed'});
+        logElapsed.innerHTML = '⏱ ثبت <span class="pj-elapsed-txt">۰</span> دق';
         self._logElapsedBtn = logElapsed;
         logElapsed.onclick = function(){
             if(p.state.elapsed < 60){ new obsidian.Notice('کمتر از ۱ دقیقه گذشته!',3000); return; }
             p._logNow(false);
         };
 
-        // ثبت ۲۵ دقیقه کامل
-        var logFull = logRow.createEl('button',{text:'✅ ثبت ' + fa(String(p.settings.workDuration)) + ' دق کامل',cls:'pj-log-btn pj-log-full'});
-        logFull.onclick = function(){
-            p._logNow(true);
-        };
-
-        // ── نقاط سشن ──
-        var dots = pane.createEl('div',{cls:'pj-dots',text:'○  ○  ○  ○'});
-        self._dotsEl = dots;
+        var logFull = bottomRow.createEl('button',{text:'✓ ثبت کامل',cls:'pj-log-btn pj-log-full'});
+        logFull.onclick = function(){ p._logNow(true); };
     }
 
     _buildSounds(pane) {
@@ -319,7 +334,7 @@ class PomodoroView extends obsidian.ItemView {
             pane.querySelectorAll('.pj-sound-btn').forEach(function(b){ b.classList.remove('active'); });
         };
 
-        var resetAll = hdr.createEl('button',{text:'↺ ریست',cls:'pj-reset-btn'});
+        var resetAll = hdr.createEl('button',{text:'↺ ریست',cls:'pj-sound-reset-btn'});
         resetAll.title = 'برگشت به حالت اولیه — خاموش کردن همه و ریست volume‌ها';
         resetAll.onclick = function(){
             p.stopAllSounds();
@@ -478,29 +493,57 @@ class PomodoroView extends obsidian.ItemView {
         var txt = fa(String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'));
 
         if(this._timeTxt) this._timeTxt.textContent = txt;
-        if(this._ringFg)  this._ringFg.style.strokeDashoffset = CIRC*(1 - st.secs/Math.max(st.total,1));
-        if(this._slider && !this._slider.matches(':active')) this._slider.value = String(Math.round(st.secs/60));
 
-        if(this._startBtn){
-            this._startBtn.textContent = !st.running ? '▶ شروع' : st.paused ? '▶ ادامه' : '⏸ مکث';
+        // ring progress — از _ringCirc استفاده می‌کنه اگه موجود باشه
+        if(this._ringFg){
+            var circ = this._ringCirc || CIRC;
+            this._ringFg.style.strokeDashoffset = circ * (1 - st.secs / Math.max(st.total, 1));
         }
 
-        // نمایش زمان گذشته روی دکمه
+        if(this._slider && !this._slider.matches(':active'))
+            this._slider.value = String(Math.round(st.secs/60));
+
+        // آیکن دکمه‌ی play
+        if(this._startBtn){
+            var isPlaying = st.running && !st.paused;
+            this._startBtn.innerHTML = isPlaying
+                ? '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>';
+            this._startBtn.classList.toggle('pj-play-btn--paused', !isPlaying && st.paused);
+        }
+
+        // وضعیت
+        if(this._statusEl){
+            this._statusEl.textContent = !st.running ? 'آماده'
+                : st.paused ? 'مکث'
+                : st.type === 'work' ? 'در حال کار...'
+                : 'استراحت...';
+        }
+
+        // زمان گذشته
         if(this._logElapsedBtn){
             var em = Math.floor(st.elapsed/60);
             var eSpan = this._logElapsedBtn.querySelector('.pj-elapsed-txt');
             if(eSpan) eSpan.textContent = fa(String(em||0));
-            this._logElapsedBtn.style.opacity = (st.elapsed >= 60) ? '1' : '0.45';
+            this._logElapsedBtn.style.opacity = (st.elapsed >= 60) ? '1' : '0.4';
         }
 
         // نقاط
         if(this._dotsEl){
-            var n = st.count===0 ? 0 : (st.count%4||4);
-            var d=''; for(var i=0;i<4;i++) d+=(i<n?'🍅':'○')+'  ';
-            this._dotsEl.textContent = d.trim();
+            var n = st.count === 0 ? 0 : (st.count % 4 || 4);
+            this._dotsEl.querySelectorAll('.pj-dot').forEach(function(d, i){
+                d.classList.toggle('filled', i < n);
+            });
         }
 
-        // اینپوت‌ها — فقط وقتی focus ندارن آپدیت بشن
+        // slider value label
+        if(this._sliderVal && this._slider && !this._slider.matches(':active'))
+            this._sliderVal.textContent = fa(String(Math.round(st.secs/60))) + ' دق';
+
+        // رنگ بر اساس نوع سشن
+        if(this._timerPane) this._timerPane.dataset.type = st.type || 'work';
+
+        // اینپوت‌ها
         if(this._taskIn && document.activeElement !== this._taskIn)
             this._taskIn.value = st.task || '';
         if(this._projIn && document.activeElement !== this._projIn)

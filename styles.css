@@ -1,448 +1,533 @@
-/* ── ریشه view ── */
+/* ══════════════════════════════════════════════
+   Pomodoro — UI v3  (Vazirmatn + clean app style)
+   ══════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;900&display=swap');
+
+/* ── متغیرها ── */
 .pj-root {
-    padding: 12px;
+    --pj-work:   #E05C5C;
+    --pj-short:  #3AAB6D;
+    --pj-long:   #3D8FE0;
+    --pj-accent: var(--pj-work);
+
+    --pj-bg:      var(--background-primary);
+    --pj-card:    var(--background-secondary);
+    --pj-border:  var(--background-modifier-border);
+    --pj-radius:  12px;
+
+    font-family: 'Vazirmatn', var(--font-interface), sans-serif;
+    direction: rtl;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    direction: rtl;
     height: 100%;
-    box-sizing: border-box;
     overflow-y: auto;
-    font-family: var(--font-interface);
+    box-sizing: border-box;
+    background: var(--pj-bg);
 }
 
-/* ── تب‌بار ── */
+/* رنگ داینامیک per session type */
+.pj-pane[data-type="work"]  { --pj-accent: var(--pj-work);  }
+.pj-pane[data-type="short"] { --pj-accent: var(--pj-short); }
+.pj-pane[data-type="long"]  { --pj-accent: var(--pj-long);  }
+
+/* ══ تب‌بار ══ */
 .pj-tabbar {
     display: flex;
+    border-bottom: 1px solid var(--pj-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--pj-bg);
+    padding: 0 8px;
     gap: 4px;
-    background: var(--background-secondary);
-    border-radius: 10px;
-    padding: 3px;
 }
-
 .pj-tb {
     flex: 1;
-    padding: 6px;
+    background: none;
     border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.pj-tb.active {
-    background: var(--background-primary);
-    color: var(--text-normal);
+    border-bottom: 2.5px solid transparent;
+    padding: 11px 0 9px;
+    font-family: inherit;
+    font-size: 13px;
     font-weight: 600;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    color: var(--text-faint);
+    cursor: pointer;
+    letter-spacing: .3px;
+    transition: color .2s, border-color .2s;
+    margin-bottom: -1px;
+}
+.pj-tb:hover { color: var(--text-muted); }
+.pj-tb.active {
+    color: var(--pj-accent);
+    border-bottom-color: var(--pj-accent);
 }
 
-/* ── پنل ── */
+/* ══ پنل تایمر ══ */
 .pj-pane {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    align-items: center;
+    padding: 18px 16px 24px;
+    gap: 14px;
+    flex: 1;
 }
+.pj-pane-sound { align-items: stretch; gap: 10px; }
 
-/* ── نوع سشن ── */
+/* ══ session pills ══ */
 .pj-sess-row {
     display: flex;
-    gap: 4px;
+    gap: 0;
+    background: var(--pj-card);
+    border-radius: 50px;
+    padding: 3px;
+    width: 100%;
 }
-
 .pj-sess-btn {
     flex: 1;
-    padding: 5px 2px;
-    border: 1.5px solid var(--background-modifier-border);
-    border-radius: 8px;
-    background: var(--background-secondary);
-    color: var(--text-muted);
-    font-size: 11px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.15s;
-    white-space: nowrap;
-}
-
-.pj-sess-btn.active {
-    border-color: var(--interactive-accent);
-    background: var(--interactive-accent);
-    color: white;
+    background: none;
+    border: none;
+    border-radius: 50px;
+    padding: 7px 6px;
+    font-family: inherit;
+    font-size: 11.5px;
     font-weight: 600;
-}
-
-/* ── ورودی‌ها ── */
-.pj-input {
-    width: 100%;
-    padding: 7px 10px;
-    border: 1.5px solid var(--background-modifier-border);
-    border-radius: 8px;
-    background: var(--background-secondary);
-    color: var(--text-normal);
-    font-size: 13px;
-    direction: rtl;
-    box-sizing: border-box;
-    outline: none;
-    transition: border-color 0.15s;
-}
-
-.pj-input:focus { border-color: var(--interactive-accent); }
-.pj-input:disabled { opacity: 0.55; }
-
-.pj-proj:focus { border-color: #f59e0b; }
-
-.pj-select {
-    width: 100%;
-    padding: 6px 10px;
-    border: 1.5px solid var(--background-modifier-border);
-    border-radius: 8px;
-    background: var(--background-secondary);
-    color: var(--text-normal);
-    font-size: 12px;
-    direction: rtl;
-    box-sizing: border-box;
+    color: var(--text-faint);
     cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+    letter-spacing: .2px;
+}
+.pj-sess-btn:hover { color: var(--text-muted); }
+.pj-sess-btn.active {
+    background: var(--pj-bg);
+    color: var(--pj-accent);
+    box-shadow: 0 1px 6px rgba(0,0,0,.14);
 }
 
-.pj-select:disabled { opacity: 0.55; }
+/* ══ وضعیت ══ */
+.pj-status {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-faint);
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    margin-bottom: -6px;
+}
 
-/* ── حلقه‌ی SVG ── */
+/* ══ حلقه + تایمر ══ */
 .pj-ring-wrap {
     position: relative;
-    width: 130px;
-    height: 130px;
-    margin: 0 auto;
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 20px color-mix(in srgb, var(--pj-accent) 20%, transparent));
+    transition: filter .4s;
 }
-
-.pj-ring-svg { width: 130px; height: 130px; }
-
+.pj-ring-svg {
+    width: 200px;
+    height: 200px;
+    transform: rotate(-90deg);
+}
 .pj-ring-bg {
     fill: none;
-    stroke: var(--background-modifier-border);
-    stroke-width: 8;
+    stroke: var(--pj-border);
+    stroke-width: 5;
 }
-
 .pj-ring-fg {
     fill: none;
-    stroke: var(--interactive-accent);
-    stroke-width: 8;
+    stroke: var(--pj-accent);
+    stroke-width: 5;
     stroke-linecap: round;
-    transform: rotate(-90deg);
-    transform-origin: 60px 60px;
-    transition: stroke-dashoffset 1s linear;
+    transition: stroke-dashoffset .7s cubic-bezier(.4,0,.2,1), stroke .4s;
 }
-
-.pj-time-txt {
+.pj-ring-center {
     position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%,-50%);
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--text-normal);
-    letter-spacing: 2px;
-    pointer-events: none;
-}
-
-/* ── کنترل‌ها ── */
-.pj-ctrl-row {
+    inset: 0;
     display: flex;
-    gap: 8px;
     align-items: center;
+    justify-content: center;
 }
-
-.pj-start-btn {
-    flex: 1;
-    padding: 9px;
-    background: var(--interactive-accent);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
+.pj-time-txt {
+    font-family: 'Vazirmatn', var(--font-interface), sans-serif;
+    font-size: 52px;
     font-weight: 700;
-    cursor: pointer;
-    transition: opacity 0.15s;
+    letter-spacing: 2px;
+    color: var(--text-normal);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
-.pj-start-btn:hover { opacity: 0.88; }
-
-.pj-reset-btn {
-    width: 38px; height: 38px;
-    background: var(--background-secondary);
-    border: 1.5px solid var(--background-modifier-border);
-    border-radius: 10px;
-    font-size: 18px;
+/* ══ دکمه‌ی play ══ */
+.pj-play-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--pj-accent);
+    border: none;
+    color: #fff;
     cursor: pointer;
-    color: var(--text-muted);
-    transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+        0 4px 18px color-mix(in srgb, var(--pj-accent) 45%, transparent),
+        0 1px 3px rgba(0,0,0,.12);
+    transition: background .4s, transform .15s, box-shadow .4s;
+    flex-shrink: 0;
+    padding: 0;
+    margin-top: -2px;
+    position: relative;
+}
+/* حلقه‌ی خارجی مات دور دکمه */
+.pj-play-btn::before {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--pj-accent) 12%, transparent);
+    transition: background .4s;
+}
+.pj-play-btn:hover { transform: scale(1.07); box-shadow: 0 6px 24px color-mix(in srgb, var(--pj-accent) 50%, transparent); }
+.pj-play-btn:active { transform: scale(.94); }
+
+/* ══ نقاط ══ */
+.pj-dots {
+    display: flex;
+    gap: 7px;
+    justify-content: center;
+    margin-top: -2px;
+}
+.pj-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--pj-border);
+    transition: background .3s, transform .2s;
+}
+.pj-dot.filled {
+    background: var(--pj-accent);
+    transform: scale(1.2);
 }
 
-.pj-reset-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+/* ══ فرم کارت ══ */
+.pj-form-card {
+    width: 100%;
+    background: var(--pj-card);
+    border-radius: var(--pj-radius);
+    overflow: hidden;
+    border: 1px solid var(--pj-border);
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
 
-/* ── اسلایدر زمان ── */
+/* فیلد با label */
+.pj-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 10px 14px 11px;
+    border-bottom: 1px solid var(--pj-border);
+    transition: background .15s;
+}
+.pj-field:focus-within { background: color-mix(in srgb, var(--pj-accent) 4%, var(--pj-card)); }
+.pj-field--last { border-bottom: none; }
+.pj-field--slider { border-bottom: none; }
+
+.pj-field-label {
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.pj-field-input {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-normal);
+    direction: rtl;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.pj-field-input::placeholder { color: var(--text-faint); font-weight: 400; }
+
+.pj-field-select {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-normal);
+    direction: rtl;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+}
+
+/* اسلایدر */
 .pj-slider-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 0 4px;
+    gap: 8px;
+    padding-top: 4px;
 }
-.pj-slider-min, .pj-slider-max {
-    font-size: 10px;
+.pj-slider-lbl {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
     color: var(--text-faint);
-    flex-shrink: 0;
+    min-width: 14px;
+}
+.pj-slider-val {
+    min-width: 38px;
+    text-align: left;
+    color: var(--pj-accent);
+    font-weight: 700;
+    font-size: 11.5px;
 }
 .pj-time-slider {
     flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
     height: 4px;
+    border-radius: 2px;
+    background: var(--pj-border);
+    outline: none;
     cursor: pointer;
-    accent-color: var(--interactive-accent);
+}
+.pj-time-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--pj-accent);
+    cursor: pointer;
+    box-shadow: 0 1px 5px rgba(0,0,0,.25);
+    transition: transform .15s;
+}
+.pj-time-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+.pj-time-slider::-moz-range-thumb {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--pj-accent);
+    border: none;
 }
 
-/* ── دکمه‌های ثبت زودهنگام ── */
-.pj-log-row {
+/* ══ ردیف پایین ══ */
+.pj-bottom-row {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
 }
+.pj-icon-btn {
+    background: var(--pj-card);
+    border: 1px solid var(--pj-border);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: color .2s, background .2s;
+}
+.pj-icon-btn:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+
 .pj-log-btn {
     flex: 1;
-    padding: 7px 6px;
-    border-radius: 9px;
+    background: var(--pj-card);
+    border: 1px solid var(--pj-border);
+    border-radius: 50px;
+    padding: 8px 10px;
+    font-family: inherit;
     font-size: 11.5px;
-    cursor: pointer;
-    border: 1.5px solid var(--background-modifier-border);
-    transition: all 0.15s;
-    text-align: center;
-}
-.pj-log-elapsed {
-    background: var(--background-secondary);
-    color: var(--text-muted);
-}
-.pj-log-elapsed:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
-.pj-log-full {
-    background: var(--interactive-accent);
-    color: white;
-    border-color: var(--interactive-accent);
     font-weight: 600;
-}
-.pj-log-full:hover { opacity: 0.88; }
-
-/* ── نقاط سشن ── */
-.pj-dots {
-    text-align: center;
-    font-size: 14px;
-    letter-spacing: 3px;
     color: var(--text-muted);
-    padding: 4px 0;
+    cursor: pointer;
+    text-align: center;
+    transition: all .18s;
+    white-space: nowrap;
 }
+.pj-log-btn:hover {
+    color: var(--pj-accent);
+    border-color: var(--pj-accent);
+    background: color-mix(in srgb, var(--pj-accent) 8%, var(--pj-card));
+}
+.pj-log-elapsed { opacity: .45; }
+.pj-log-elapsed:hover { opacity: 1; }
 
-/* ── بخش صدا ── */
+/* ══════════════════════════════════════════════
+   تب صدا
+   ══════════════════════════════════════════════ */
 .pj-sound-hdr {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 6px;
     margin-bottom: 4px;
 }
-
-.pj-sound-lbl { font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
-
-.pj-stopall-btn {
-    background: none;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+.pj-sound-lbl {
+    flex: 1;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
     color: var(--text-muted);
-    font-size: 11px;
-    padding: 3px 8px;
-    cursor: pointer;
-    transition: all 0.15s;
+    letter-spacing: .3px;
 }
-.pj-stopall-btn:hover { background: var(--background-modifier-hover); }
-
-.pj-reset-btn {
-    background: none;
-    border: 1px solid var(--background-modifier-border);
+.pj-stopall-btn, .pj-sound-reset-btn {
+    background: var(--pj-card);
+    border: 1px solid var(--pj-border);
     border-radius: 6px;
+    padding: 4px 9px;
+    font-family: inherit;
+    font-size: 11.5px;
     color: var(--text-muted);
-    font-size: 11px;
-    padding: 3px 8px;
     cursor: pointer;
-    transition: all 0.15s;
-    margin-right: 4px;
+    transition: color .15s, background .15s;
 }
-.pj-reset-btn:hover { background: var(--background-modifier-hover); color: var(--text-error); border-color: var(--text-error); }
+.pj-stopall-btn:hover, .pj-sound-reset-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
 
-/* ── ترکیب‌های صدا ── */
+/* presets */
 .pj-preset-wrap {
-    margin: 6px 0 10px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 8px;
+    border: 1px solid var(--pj-border);
+    border-radius: var(--pj-radius);
     overflow: hidden;
+    margin-bottom: 6px;
 }
 .pj-preset-title {
+    font-family: inherit;
     font-size: 10.5px;
+    font-weight: 700;
     color: var(--text-faint);
-    font-weight: 600;
-    padding: 4px 10px;
-    background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
-    letter-spacing: 0.03em;
+    padding: 5px 12px;
+    background: var(--pj-card);
+    border-bottom: 1px solid var(--pj-border);
+    letter-spacing: .5px;
 }
-.pj-preset-list {
-    display: flex;
-    flex-direction: column;
-}
+.pj-preset-list { display: flex; flex-direction: column; }
 .pj-preset-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 10px;
-    border-bottom: 1px solid var(--background-modifier-border);
-    transition: background 0.12s;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--pj-border);
+    transition: background .12s;
+    cursor: pointer;
 }
 .pj-preset-item:last-child { border-bottom: none; }
 .pj-preset-item:hover { background: var(--background-modifier-hover); }
 .pj-preset-item.pj-preset-active {
-    background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+    background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
 }
 .pj-preset-name {
     flex: 1;
-    font-size: 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
     color: var(--text-normal);
-    cursor: pointer;
     user-select: none;
 }
 .pj-preset-name.pj-preset-empty { color: var(--text-faint); font-style: italic; }
 .pj-preset-save-btn {
-    background: none;
-    border: none;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 5px;
-    opacity: 0.45;
-    transition: opacity 0.15s;
-    line-height: 1;
+    background: none; border: none;
+    font-size: 13px; cursor: pointer;
+    padding: 2px 4px; border-radius: 4px;
+    opacity: .35; transition: opacity .15s;
 }
-.pj-preset-save-btn:hover { opacity: 1; background: var(--background-modifier-hover); }
+.pj-preset-save-btn:hover { opacity: 1; }
 .pj-preset-name-inp {
-    flex: 1;
-    font-size: 12px;
+    flex: 1; font-family: inherit; font-size: 12px;
     border: 1px solid var(--interactive-accent);
-    border-radius: 4px;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    padding: 1px 6px;
-    direction: rtl;
-    outline: none;
+    border-radius: 4px; background: var(--pj-bg);
+    color: var(--text-normal); padding: 1px 6px;
+    direction: rtl; outline: none;
 }
 
-/* ── مدیریت دسته‌بندی‌ها در settings ── */
-.pj-cat-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 10px;
+/* لیست صداها */
+.pj-sound-list { display: flex; flex-direction: column; gap: 4px; }
+.pj-sound-row { display: flex; align-items: center; gap: 8px; padding: 1px 0; }
+.pj-sound-btn {
+    min-width: 88px;
+    background: var(--pj-card);
+    border: 1px solid var(--pj-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: right;
+    transition: all .15s;
+    flex-shrink: 0;
 }
-.pj-cat-row, .pj-cat-add-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.pj-sound-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.pj-sound-btn.active {
+    background: color-mix(in srgb, var(--interactive-accent) 14%, var(--pj-card));
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
+    font-weight: 700;
 }
-.pj-cat-label-inp {
+.pj-vol {
     flex: 1;
-    font-size: 13px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    padding: 4px 8px;
-    direction: rtl;
-    outline: none;
-    transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
+    height: 3px; border-radius: 2px;
+    background: var(--pj-border);
+    outline: none; cursor: pointer;
+}
+.pj-vol::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--interactive-accent); cursor: pointer;
+}
+.pj-vol::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--interactive-accent); border: none;
+}
+
+/* ══════════════════════════════════════════════
+   مدیریت دسته‌بندی در settings
+   ══════════════════════════════════════════════ */
+.pj-cat-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.pj-cat-row, .pj-cat-add-row { display: flex; align-items: center; gap: 6px; }
+.pj-cat-label-inp {
+    flex: 1; font-family: inherit; font-size: 13px;
+    border: 1px solid var(--pj-border);
+    border-radius: 6px; background: var(--pj-bg);
+    color: var(--text-normal); padding: 4px 8px;
+    direction: rtl; outline: none; transition: border-color .15s;
 }
 .pj-cat-label-inp:focus { border-color: var(--interactive-accent); }
 .pj-cat-del-btn {
-    background: none;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 3px 5px;
-    border-radius: 5px;
-    opacity: 0.45;
-    transition: opacity 0.15s;
+    background: none; border: none; font-size: 14px;
+    cursor: pointer; padding: 3px 5px; border-radius: 5px;
+    opacity: .4; transition: opacity .15s;
 }
-.pj-cat-del-btn:hover { opacity: 1; background: var(--background-modifier-hover); }
+.pj-cat-del-btn:hover { opacity: 1; }
 .pj-cat-add-btn {
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 5px 12px; border-radius: 8px;
     border: 1px solid var(--interactive-accent);
-    background: none;
-    color: var(--interactive-accent);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.15s;
+    background: none; color: var(--interactive-accent);
+    cursor: pointer; white-space: nowrap; transition: background .15s;
 }
-.pj-cat-add-btn:hover { background: color-mix(in srgb, var(--interactive-accent) 15%, transparent); }
-
-.pj-sound-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.pj-sound-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.pj-sound-btn {
-    flex: 0 0 100px;
-    padding: 6px 8px;
-    border: 1.5px solid var(--background-modifier-border);
-    border-radius: 8px;
-    background: var(--background-secondary);
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-align: right;
-}
-
-.pj-sound-btn.active {
-    background: var(--interactive-accent);
-    color: white;
-    border-color: var(--interactive-accent);
-    font-weight: 600;
-}
-
-.pj-sound-btn:hover:not(.active) { background: var(--background-modifier-hover); color: var(--text-normal); }
-
-.pj-vol {
-    flex: 1;
-    height: 4px;
-    cursor: pointer;
-    accent-color: var(--interactive-accent);
-}
-
-/* ── مودال ── */
-.pj-modal { text-align: center; padding: 8px 0; }
-.pj-modal-emoji { font-size: 52px; margin-bottom: 6px; }
-.pj-modal-q { color: var(--text-muted); margin: 0 0 10px; }
-.pj-modal-ta {
-    width: 100%; min-height: 70px; padding: 8px 10px;
-    border: 1.5px solid var(--background-modifier-border);
-    border-radius: 8px; background: var(--background-secondary);
-    color: var(--text-normal); font-size: 14px; direction: rtl;
-    resize: vertical; box-sizing: border-box; margin-bottom: 6px;
-    outline: none;
-}
-.pj-modal-ta:focus { border-color: var(--interactive-accent); }
-.pj-modal-hint { font-size: 11px; color: var(--text-faint); margin: 0 0 10px; }
-.pj-modal-row { display: flex; gap: 8px; justify-content: center; }
-.pj-skip {
-    padding: 8px 14px; border: 1.5px solid var(--background-modifier-border);
-    border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
+.pj-cat-add-btn:hover {
+    background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
 }
