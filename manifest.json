@@ -1,7 +1,7 @@
 {
   "id": "pomodoro-journal",
   "name": "Pomodoro Tracker",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minAppVersion": "0.15.0",
   "description": "Combines time management with the Pomodoro technique alongside ambient sounds for deep focus. Automatically logs completed sessions to your daily note with Shamsi timestamps, category, project, and duration. Includes per-track volume control and saveable sound presets. Fully optimized for Persian (RTL) vaults.",
   "author": "Mohammad Reza Ahari",
