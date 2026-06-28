@@ -1259,6 +1259,36 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
 
         var hierList = el.createEl('div', {cls:'pj-hier-list'});
 
+        // ── نوار حذف گروهی (خارج از renderHierList تا rebuild نشه) ──
+        var selectedCats = new Set();
+        var bulkBar = el.createEl('div', {cls:'pj-bulk-bar'});
+        bulkBar.style.display = 'none';
+        var bulkLabel = bulkBar.createEl('span', {cls:'pj-bulk-label'});
+        var bulkClear = bulkBar.createEl('button', {text:'لغو', cls:'pj-bulk-clear'});
+        var bulkDelBtn = bulkBar.createEl('button', {cls:'pj-bulk-del'});
+        bulkDelBtn.innerHTML = '🗑️ حذف موارد انتخابی';
+
+        function updateBulkBar() {
+            var n = selectedCats.size;
+            if(n > 0){
+                bulkBar.style.display = '';
+                bulkLabel.textContent = fa(String(n)) + ' دسته انتخاب شده';
+            } else {
+                bulkBar.style.display = 'none';
+            }
+        }
+        bulkClear.onclick = function(){
+            selectedCats.clear(); updateBulkBar(); renderHierList();
+        };
+        bulkDelBtn.onclick = async function(){
+            p.settings.categories = p.settings.categories.filter(function(c){ return !selectedCats.has(c.v); });
+            selectedCats.clear();
+            await p._saveSettings(); updateBulkBar(); renderHierList();
+            if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+            if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+            new obsidian.Notice('🗑️ دسته‌های انتخابی حذف شدن', 2000);
+        };
+
         function renderHierList() {
             hierList.empty();
 
@@ -1268,6 +1298,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
             p.settings.categories.forEach(function(cat, catIdx){
                 // ── کارت دسته‌بندی ──
                 var card = hierList.createEl('div', {cls:'pj-hier-card'});
+                if(selectedCats.has(cat.v)) card.classList.add('pj-hier-selected');
                 card.draggable = true;
 
                 // رویدادهای drag کارت
@@ -1300,28 +1331,47 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                     if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
                 });
 
-                // هدر کارت
+                // هدر کارت — ترتیب RTL: [چک‌باکس][حذف][input flex:1][grip]
                 var header = card.createEl('div', {cls:'pj-hier-header'});
-                var grip = header.createEl('span', {cls:'pj-drag-grip', text:'⠿'});
-                grip.title = 'بکش تا ترتیب رو عوض کنی';
+
+                // چک‌باکس انتخاب
+                var cb = document.createElement('input');
+                cb.type = 'checkbox'; cb.className = 'pj-hier-cb';
+                cb.checked = selectedCats.has(cat.v);
+                cb.title = 'انتخاب برای حذف گروهی';
+                cb.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                cb.onchange = function(){
+                    if(cb.checked){ selectedCats.add(cat.v); card.classList.add('pj-hier-selected'); }
+                    else { selectedCats.delete(cat.v); card.classList.remove('pj-hier-selected'); }
+                    updateBulkBar();
+                };
+                header.appendChild(cb);
+
+                // دکمه‌ی حذف تکی — سمت راست (اول در DOM = راست در RTL)
+                var catDel = header.createEl('button', {cls:'pj-hier-del-btn'});
+                catDel.innerHTML = '🗑️'; catDel.title = 'حذف این دسته‌بندی';
+                catDel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                catDel.onclick = async function(){
+                    selectedCats.delete(cat.v);
+                    p.settings.categories.splice(catIdx, 1);
+                    await p._saveSettings(); updateBulkBar(); renderHierList();
+                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+                    if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                };
+
+                // اینپوت نام (flex:1 وسط)
                 var catInp = header.createEl('input', {cls:'pj-hier-cat-inp'});
                 catInp.value = cat.l; catInp.placeholder = 'مثلاً 📖 مطالعه کتاب';
-                // جلوگیری از شروع drag موقع کلیک روی input
                 catInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
                 catInp.onchange = async function(){
                     var newL = catInp.value.trim(); if(!newL) return;
                     cat.l = newL; await p._saveSettings();
                     if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
                 };
-                var catDel = header.createEl('button', {cls:'pj-hier-del-btn'});
-                catDel.innerHTML = '🗑️'; catDel.title = 'حذف این دسته‌بندی';
-                catDel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                catDel.onclick = async function(){
-                    p.settings.categories.splice(catIdx, 1);
-                    await p._saveSettings(); renderHierList();
-                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
-                    if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
-                };
+
+                // grip — سمت چپ (آخر در DOM = چپ در RTL)
+                var grip = header.createEl('span', {cls:'pj-drag-grip', text:'⠿'});
+                grip.title = 'بکش تا ترتیب رو عوض کنی';
 
                 // بدنه‌ی کارت — زیرمجموعه‌ها
                 if(!cat.items) cat.items = [];
