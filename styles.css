@@ -591,6 +591,20 @@
 .pj-acc-list {
     display: flex; flex-direction: column;
     gap: 0; margin-bottom: 10px;
+    max-width: 440px;   /* جمع‌وجور مثل موکاپ — جلوگیری از فاصله‌ی طولانی در پنل عریض */
+}
+
+/* reset استایلِ پیش‌فرضِ دکمه‌های اوبسیدین داخل accordion (حذف باکس/سایه) */
+.pj-acc-hdr button,
+.pj-tag-x,
+.pj-acc-add-cat button {
+    box-shadow: none !important;
+    height: auto;
+}
+.pj-acc-hdr button:hover,
+.pj-tag-x:hover {
+    box-shadow: none !important;
+    background: transparent !important;
 }
 
 /* هر آیتم accordion — رادیوس گرد مثل Notion */
@@ -620,7 +634,7 @@
 .pj-acc-hdr:hover { background: var(--background-modifier-hover); }
 
 .pj-acc-chevron {
-    background: none; border: none;
+    background: none !important; border: none;
     font-size: 10px;
     color: var(--text-faint);
     cursor: pointer; padding: 0 2px; flex-shrink: 0;
@@ -650,7 +664,7 @@
 .theme-light .pj-acc-badge { color: #b45309; }
 
 .pj-acc-del {
-    background: none; border: none;
+    background: none !important; border: none;
     font-size: 15px; line-height: 1;
     color: var(--text-faint);
     cursor: pointer; padding: 0 2px;
