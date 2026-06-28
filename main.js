@@ -1245,229 +1245,140 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        // ── دسته‌بندی‌ها و زیرمجموعه‌ها (درختی) ──
-        el.createEl('h3', {text: '📋 دسته‌بندی‌ها و زیرمجموعه‌ها'});
-        el.createEl('p', {
-            text: 'هر دسته می‌تونه زیرمجموعه‌های خودش رو داشته باشه. با انتخاب دسته در پنل، فقط زیرمجموعه‌های همون دسته نشون داده می‌شن.',
-            cls: 'setting-item-description'
-        });
+        // ── دسته‌بندی‌ها — accordion + chip tags ──
+        el.createEl('h3', {text: '📋 دسته‌بندی‌ها'});
 
-        if(!p.settings.categories || !p.settings.categories.length){
+        if(!p.settings.categories || !p.settings.categories.length)
             p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); });
-        }
         p.settings.categories.forEach(function(c){ if(!c.items) c.items = []; });
 
-        var hierList = el.createEl('div', {cls:'pj-hier-list'});
+        var accList = el.createEl('div', {cls:'pj-acc-list'});
+        var openCats = new Set(); // کدوم دسته‌ها باز هستن
+        var catDrag  = { src: null };
 
-        // ── نوار حذف گروهی (خارج از renderHierList تا rebuild نشه) ──
-        var selectedCats = new Set();
-        var bulkBar = el.createEl('div', {cls:'pj-bulk-bar'});
-        bulkBar.style.display = 'none';
-        var bulkLabel = bulkBar.createEl('span', {cls:'pj-bulk-label'});
-        var bulkClear = bulkBar.createEl('button', {text:'لغو', cls:'pj-bulk-clear'});
-        var bulkDelBtn = bulkBar.createEl('button', {cls:'pj-bulk-del'});
-        bulkDelBtn.innerHTML = '🗑️ حذف موارد انتخابی';
-
-        function updateBulkBar() {
-            var n = selectedCats.size;
-            if(n > 0){
-                bulkBar.style.display = '';
-                bulkLabel.textContent = fa(String(n)) + ' دسته انتخاب شده';
-            } else {
-                bulkBar.style.display = 'none';
-            }
-        }
-        bulkClear.onclick = function(){
-            selectedCats.clear(); updateBulkBar(); renderHierList();
-        };
-        bulkDelBtn.onclick = async function(){
-            p.settings.categories = p.settings.categories.filter(function(c){ return !selectedCats.has(c.v); });
-            selectedCats.clear();
-            await p._saveSettings(); updateBulkBar(); renderHierList();
+        function syncPanel() {
             if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
             if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
-            new obsidian.Notice('🗑️ دسته‌های انتخابی حذف شدن', 2000);
-        };
+        }
 
-        function renderHierList() {
-            hierList.empty();
+        function renderAcc() {
+            accList.empty();
+            p.settings.categories.forEach(function(cat, catIdx) {
+                var isOpen = openCats.has(cat.v);
 
-            // ── ایندکس‌های drag در حال انجام ──
-            var catDrag = { src: null };
+                // ── accordion item ──
+                var item = accList.createEl('div', {cls: 'pj-acc-item' + (isOpen ? ' pj-acc-open' : '')});
+                item.draggable = true;
 
-            p.settings.categories.forEach(function(cat, catIdx){
-                // ── کارت دسته‌بندی ──
-                var card = hierList.createEl('div', {cls:'pj-hier-card'});
-                if(selectedCats.has(cat.v)) card.classList.add('pj-hier-selected');
-                card.draggable = true;
-
-                // رویدادهای drag کارت
-                card.addEventListener('dragstart', function(e){
-                    catDrag.src = catIdx;
-                    e.dataTransfer.effectAllowed = 'move';
+                item.addEventListener('dragstart', function(e) {
+                    catDrag.src = catIdx; e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', 'cat');
-                    setTimeout(function(){ card.classList.add('pj-dragging'); }, 0);
+                    setTimeout(function(){ item.classList.add('pj-dragging'); }, 0);
                 });
-                card.addEventListener('dragend', function(){
-                    card.classList.remove('pj-dragging');
-                    hierList.querySelectorAll('.pj-drag-over').forEach(function(el){ el.classList.remove('pj-drag-over'); });
+                item.addEventListener('dragend', function() {
+                    item.classList.remove('pj-dragging');
+                    accList.querySelectorAll('.pj-drag-over').forEach(function(el){ el.classList.remove('pj-drag-over'); });
                 });
-                card.addEventListener('dragover', function(e){
-                    if(e.dataTransfer.getData && e.dataTransfer.types.indexOf('text/plain') === -1) return;
+                item.addEventListener('dragover', function(e) {
                     e.preventDefault(); e.dataTransfer.dropEffect = 'move';
-                    if(catDrag.src !== catIdx) card.classList.add('pj-drag-over');
+                    if(catDrag.src !== catIdx) item.classList.add('pj-drag-over');
                 });
-                card.addEventListener('dragleave', function(e){
-                    if(!card.contains(e.relatedTarget)) card.classList.remove('pj-drag-over');
+                item.addEventListener('dragleave', function(e) {
+                    if(!item.contains(e.relatedTarget)) item.classList.remove('pj-drag-over');
                 });
-                card.addEventListener('drop', async function(e){
-                    e.preventDefault(); e.stopPropagation();
-                    card.classList.remove('pj-drag-over');
-                    var src = catDrag.src;
-                    if(src === null || src === catIdx) return;
+                item.addEventListener('drop', async function(e) {
+                    e.preventDefault(); e.stopPropagation(); item.classList.remove('pj-drag-over');
+                    var src = catDrag.src; if(src === null || src === catIdx) return;
                     var moved = p.settings.categories.splice(src, 1)[0];
                     p.settings.categories.splice(catIdx, 0, moved);
-                    await p._saveSettings(); renderHierList();
-                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+                    await p._saveSettings(); renderAcc(); syncPanel();
                 });
 
-                // هدر کارت — ترتیب RTL: [چک‌باکس][حذف][input flex:1][grip]
-                var header = card.createEl('div', {cls:'pj-hier-header'});
+                // ── header ──
+                var hdr = item.createEl('div', {cls: 'pj-acc-hdr'});
 
-                // چک‌باکس انتخاب
-                var cb = document.createElement('input');
-                cb.type = 'checkbox'; cb.className = 'pj-hier-cb';
-                cb.checked = selectedCats.has(cat.v);
-                cb.title = 'انتخاب برای حذف گروهی';
-                cb.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                cb.onchange = function(){
-                    if(cb.checked){ selectedCats.add(cat.v); card.classList.add('pj-hier-selected'); }
-                    else { selectedCats.delete(cat.v); card.classList.remove('pj-hier-selected'); }
-                    updateBulkBar();
-                };
-                header.appendChild(cb);
-
-                // دکمه‌ی حذف تکی — سمت راست (اول در DOM = راست در RTL)
-                var catDel = header.createEl('button', {cls:'pj-hier-del-btn'});
-                catDel.innerHTML = '🗑️'; catDel.title = 'حذف این دسته‌بندی';
-                catDel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                catDel.onclick = async function(){
-                    selectedCats.delete(cat.v);
-                    p.settings.categories.splice(catIdx, 1);
-                    await p._saveSettings(); updateBulkBar(); renderHierList();
-                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
-                    if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                // ▶/▼ chevron (کلیک برای باز/بستن)
+                var chevron = hdr.createEl('button', {cls: 'pj-acc-chevron'});
+                chevron.innerHTML = isOpen ? '▾' : '▸';
+                chevron.onclick = function() {
+                    if(isOpen) openCats.delete(cat.v); else openCats.add(cat.v);
+                    renderAcc();
                 };
 
-                // اینپوت نام (flex:1 وسط)
-                var catInp = header.createEl('input', {cls:'pj-hier-cat-inp'});
-                catInp.value = cat.l; catInp.placeholder = 'مثلاً 📖 مطالعه کتاب';
-                catInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                catInp.onchange = async function(){
-                    var newL = catInp.value.trim(); if(!newL) return;
-                    cat.l = newL; await p._saveSettings();
-                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+                // نام دسته (editable)
+                var nameInp = hdr.createEl('input', {cls: 'pj-acc-name'});
+                nameInp.value = cat.l; nameInp.placeholder = 'نام دسته‌بندی';
+                nameInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                nameInp.onchange = async function() {
+                    var v = nameInp.value.trim(); if(!v) return;
+                    cat.l = v; await p._saveSettings(); syncPanel();
                 };
 
-                // grip — سمت چپ (آخر در DOM = چپ در RTL)
-                var grip = header.createEl('span', {cls:'pj-drag-grip', text:'⠿'});
-                grip.title = 'بکش تا ترتیب رو عوض کنی';
-
-                // بدنه‌ی کارت — زیرمجموعه‌ها
-                if(!cat.items) cat.items = [];
-                var body = card.createEl('div', {cls:'pj-hier-body'});
-                var itemDrag = { src: null };
-
-                if(cat.items.length === 0){
-                    body.createEl('p', {text:'هنوز زیرمجموعه‌ای اضافه نشده', cls:'pj-hier-empty'});
+                // badge تعداد زیرمجموعه‌ها
+                if(cat.items && cat.items.length){
+                    hdr.createEl('span', {cls: 'pj-acc-badge', text: fa(String(cat.items.length))});
                 }
-                cat.items.forEach(function(item, itemIdx){
-                    var itemRow = body.createEl('div', {cls:'pj-hier-item'});
-                    itemRow.draggable = true;
 
-                    // رویدادهای drag آیتم
-                    itemRow.addEventListener('dragstart', function(e){
-                        e.stopPropagation(); // جلوگیری از trigger شدن drag کارت
-                        itemDrag.src = itemIdx;
-                        e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/plain', 'item');
-                        setTimeout(function(){ itemRow.classList.add('pj-dragging'); }, 0);
-                    });
-                    itemRow.addEventListener('dragend', function(){
-                        itemRow.classList.remove('pj-dragging');
-                        body.querySelectorAll('.pj-drag-over').forEach(function(el){ el.classList.remove('pj-drag-over'); });
-                    });
-                    itemRow.addEventListener('dragover', function(e){
-                        e.preventDefault(); e.stopPropagation();
-                        e.dataTransfer.dropEffect = 'move';
-                        if(itemDrag.src !== itemIdx) itemRow.classList.add('pj-drag-over');
-                    });
-                    itemRow.addEventListener('dragleave', function(){
-                        itemRow.classList.remove('pj-drag-over');
-                    });
-                    itemRow.addEventListener('drop', async function(e){
-                        e.preventDefault(); e.stopPropagation();
-                        itemRow.classList.remove('pj-drag-over');
-                        var src = itemDrag.src;
-                        if(src === null || src === itemIdx) return;
-                        var moved = cat.items.splice(src, 1)[0];
-                        cat.items.splice(itemIdx, 0, moved);
-                        await p._saveSettings(); renderHierList();
-                        if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
-                    });
+                // grip + delete
+                var grip = hdr.createEl('span', {cls: 'pj-drag-grip', text: '⠿'});
+                grip.title = 'بکش برای تغییر ترتیب';
 
-                    var itemGrip = itemRow.createEl('span', {cls:'pj-drag-grip pj-drag-grip--sm', text:'⠿'});
-                    itemGrip.title = 'بکش تا ترتیب رو عوض کنی';
-                    var itemInp = itemRow.createEl('input', {cls:'pj-hier-item-inp'});
-                    itemInp.value = item;
-                    itemInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                    itemInp.onchange = async function(){
-                        var n = itemInp.value.trim(); if(!n) return;
-                        cat.items[itemIdx] = n; await p._saveSettings();
-                        if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
-                    };
-                    var itemDel = itemRow.createEl('button', {cls:'pj-hier-item-del'});
-                    itemDel.innerHTML = '×'; itemDel.title = 'حذف';
-                    itemDel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                    itemDel.onclick = async function(){
-                        cat.items.splice(itemIdx, 1); await p._saveSettings();
-                        renderHierList();
-                        if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                var del = hdr.createEl('button', {cls: 'pj-acc-del'});
+                del.innerHTML = '×'; del.title = 'حذف';
+                del.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                del.onclick = async function() {
+                    p.settings.categories.splice(catIdx, 1);
+                    openCats.delete(cat.v);
+                    await p._saveSettings(); renderAcc(); syncPanel();
+                };
+
+                if(!isOpen) return; // collapsed — فقط header
+
+                // ── body — chip tags ──
+                var body = item.createEl('div', {cls: 'pj-acc-body'});
+                var tags = body.createEl('div', {cls: 'pj-tags'});
+
+                if(!cat.items) cat.items = [];
+                cat.items.forEach(function(sub, subIdx) {
+                    var tag = tags.createEl('span', {cls: 'pj-tag'});
+                    tag.createEl('span', {cls: 'pj-tag-text', text: sub});
+                    var x = tag.createEl('button', {cls: 'pj-tag-x', text: '×'});
+                    x.onclick = async function() {
+                        cat.items.splice(subIdx, 1);
+                        await p._saveSettings(); renderAcc(); syncPanel();
                     };
                 });
 
-                // ردیف افزودن زیرمجموعه
-                var addRow = body.createEl('div', {cls:'pj-hier-add-row'});
-                var addInp = addRow.createEl('input', {cls:'pj-hier-item-inp'});
-                addInp.placeholder = '+ زیرمجموعه‌ی جدید را بنویس';
-                addInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-                var addBtn = addRow.createEl('button', {text:'افزودن', cls:'pj-cat-add-btn'});
-                addBtn.onclick = async function(){
-                    var label = addInp.value.trim(); if(!label) return;
+                // input افزودن زیرمجموعه
+                var addInp = tags.createEl('input', {cls: 'pj-tag-inp'});
+                addInp.placeholder = '+ اضافه کن…';
+                var doAdd = async function() {
+                    var v = addInp.value.trim(); if(!v) return;
                     if(!cat.items) cat.items = [];
-                    if(cat.items.indexOf(label)===-1) cat.items.push(label);
-                    await p._saveSettings(); addInp.value = ''; renderHierList();
-                    if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                    if(cat.items.indexOf(v) === -1) cat.items.push(v);
+                    addInp.value = '';
+                    openCats.add(cat.v); // بعد از rebuild باز بمونه
+                    await p._saveSettings(); renderAcc(); syncPanel();
                 };
-                addInp.onkeydown = function(e){ if(e.key==='Enter') addBtn.click(); };
+                addInp.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); doAdd(); } };
+                addInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
             });
 
-            // ── افزودن دسته‌بندی جدید ──
-            var addCatWrap = hierList.createEl('div', {cls:'pj-hier-add-cat'});
-            var addCatInp = addCatWrap.createEl('input', {cls:'pj-cat-label-inp'});
-            addCatInp.placeholder = '+ دسته‌بندی جدید (مثلاً 🎮 بازی)';
-            var addCatBtn = addCatWrap.createEl('button', {text:'افزودن دسته', cls:'pj-cat-add-btn'});
-            addCatBtn.onclick = async function(){
+            // ── افزودن دسته‌ی جدید ──
+            var addCat = accList.createEl('div', {cls: 'pj-acc-add-cat'});
+            var addCatInp = addCat.createEl('input', {cls: 'pj-cat-label-inp'});
+            addCatInp.placeholder = 'دسته‌ی جدید… (مثلاً 🎮 بازی)';
+            var addCatBtn = addCat.createEl('button', {text: '+ افزودن', cls: 'pj-cat-add-btn'});
+            addCatBtn.onclick = async function() {
                 var label = addCatInp.value.trim(); if(!label) return;
                 var val = label.replace(/\s+/g,'-').replace(/[^\w؀-ۿ\-]/g,'') || ('cat-'+Date.now());
-                if(!p.settings.categories) p.settings.categories = [];
                 p.settings.categories.push({v:val, l:label, items:[]});
-                await p._saveSettings(); addCatInp.value = ''; renderHierList();
-                if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+                openCats.add(val); addCatInp.value = '';
+                await p._saveSettings(); renderAcc(); syncPanel();
             };
             addCatInp.onkeydown = function(e){ if(e.key==='Enter') addCatBtn.click(); };
         }
-        renderHierList();
+        renderAcc();
 
         new obsidian.Setting(el)
             .setName('بازگشت به دسته‌های پیش‌فرض')
@@ -1476,9 +1387,8 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 b.setButtonText('ریست دسته‌ها').setWarning();
                 b.onClick(async function(){
                     p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); });
-                    await p._saveSettings(); renderHierList();
-                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
-                    if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                    openCats.clear();
+                    await p._saveSettings(); renderAcc(); syncPanel();
                     new obsidian.Notice('✅ دسته‌بندی‌ها به پیش‌فرض برگشت', 3000);
                 });
             });
@@ -1494,10 +1404,8 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                     p.settings = Object.assign({}, DEFAULT_SETTINGS, {
                         categories: DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); })
                     });
-                    await p._saveSettings();
-                    renderHierList();
-                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
-                    if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                    openCats.clear();
+                    await p._saveSettings(); renderAcc(); syncPanel();
                     new obsidian.Notice('✅ تنظیمات به پیش‌فرض برگشت', 3000);
                 });
             });
