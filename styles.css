@@ -532,6 +532,53 @@
     background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
 }
 
+/* ══════════════════════════════════════════════
+   مدیریت پروژه در پنل
+   ══════════════════════════════════════════════ */
+.pj-proj-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.pj-proj-select {
+    flex: 1;
+}
+.pj-proj-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.pj-proj-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 5px;
+    opacity: .35;
+    transition: opacity .15s, background .15s;
+    line-height: 1;
+}
+.pj-proj-btn:hover {
+    opacity: 1;
+    background: var(--background-modifier-hover);
+}
+.pj-proj-inline-inp {
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+    font-family: inherit;
+    font-size: 12.5px;
+    border: 1px solid var(--interactive-accent);
+    border-radius: 6px;
+    background: var(--pj-bg);
+    color: var(--text-normal);
+    padding: 4px 8px;
+    direction: rtl;
+    outline: none;
+    box-sizing: border-box;
+}
+
 /* ══ دکمه‌ی رد استراحت ══ */
 .pj-skip-break-btn {
     width: 100%;
