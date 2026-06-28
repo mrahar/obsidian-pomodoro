@@ -254,7 +254,7 @@ class PomodoroView extends obsidian.ItemView {
         playBtn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>';
         self._startBtn = playBtn;
         playBtn.onclick = function(){
-            if(!p.state.running)    p.startSession(taskIn.value, projSel.value, catSel.value);
+            if(!p.state.running)    p.startSession(taskIn.value, p.state.project || '—', catSel.value);
             else if(p.state.paused) p.resumeSession();
             else                    p.pauseSession();
         };
@@ -431,7 +431,7 @@ class PomodoroView extends obsidian.ItemView {
         taskField.createEl('label',{text:'توضیحات', cls:'pj-field-label'});
         var taskIn = taskField.createEl('input',{cls:'pj-field-input'});
         taskIn.type='text'; taskIn.placeholder='این سشن رو در یه جمله توضیح بده...';
-        taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, projSel.value, catSel.value); };
+        taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, p.state.project || '—', catSel.value); };
         taskIn.oninput = function(){ p.state.task = taskIn.value.trim()||'—'; };
         self._taskIn = taskIn;
 
