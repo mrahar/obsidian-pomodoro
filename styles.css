@@ -503,40 +503,8 @@
 }
 
 /* ══════════════════════════════════════════════
-   layout دو ستونه‌ی settings
+   accordion دسته‌بندی‌ها — دو ستونه
    ══════════════════════════════════════════════ */
-.pj-settings-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 32px;
-    align-items: start;
-}
-/* جداکننده‌ی عمودی بین دو ستون */
-.pj-settings-col:first-child {
-    border-left: 1px solid var(--background-modifier-border);
-    padding-left: 24px;
-}
-.pj-settings-col:last-child {
-    padding-right: 4px;
-}
-/* عنوان‌های بخش */
-.pj-settings-h3 {
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    color: var(--text-muted) !important;
-    margin: 20px 0 4px !important;
-    padding: 0 !important;
-    border: none !important;
-}
-.pj-settings-h3:first-child { margin-top: 4px !important; }
-
-/* روی صفحه‌های باریک: تک‌ستون بشه */
-@media (max-width: 700px) {
-    .pj-settings-grid { grid-template-columns: 1fr; }
-    .pj-settings-col:first-child { border-left: none; padding-left: 0; }
-}
 
 /* ══════════════════════════════════════════════
    مدیریت دسته‌بندی در settings
@@ -625,9 +593,11 @@
    accordion — Notion Dark (theme-aware: light + dark)
    ══════════════════════════════════════════════ */
 .pj-acc-list {
-    display: flex; flex-direction: column;
-    gap: 0; margin-bottom: 10px;
-    max-width: 440px;   /* جمع‌وجور مثل موکاپ — جلوگیری از فاصله‌ی طولانی در پنل عریض */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 16px;
+    margin-bottom: 10px;
+    align-items: start;
 }
 
 /* reset استایلِ پیش‌فرضِ دکمه‌های اوبسیدین داخل accordion (حذف باکس/سایه) */
@@ -646,9 +616,12 @@
 /* هر آیتم accordion — رادیوس گرد مثل Notion */
 .pj-acc-item {
     border-radius: 6px;
-    margin: 2px 0;
     overflow: hidden;
     transition: background .15s;
+}
+/* وقتی باز هست، هر دو ستون رو بپوشونه */
+.pj-acc-item.pj-acc-open {
+    grid-column: 1 / -1;
 }
 .pj-acc-item.pj-drag-over {
     outline: 1px solid var(--interactive-accent);
