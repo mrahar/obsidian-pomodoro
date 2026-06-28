@@ -635,9 +635,15 @@ class PomodoroPlugin extends obsidian.Plugin {
                 new obsidian.Notice('🍅 پومودورو در پس‌زمینه تموم شد!', 6000);
                 if(this.state.type === 'work'){
                     this.state.count++;
+                    // مقادیر مهم رو قبل از ریست state ذخیره می‌کنیم —
+                    // چون بعد از Object.assign، state کلاً پاک می‌شه
+                    var bgTask      = this.state.task || 'بدون عنوان';
+                    var bgTotal     = this.state.total;
+                    var bgTimeStr   = this.state.startTimeStr;
                     // ثبت با تاخیر تا vault آماده بشه
                     setTimeout(function(){
-                        self._logToJournal(self.state.task || 'بدون عنوان', self.state.total);
+                        self.state.startTimeStr = bgTimeStr;
+                        self._logToJournal(bgTask, bgTotal);
                     }, 2000);
                 }
                 this.state = Object.assign({}, defaultState, { count: this.state.count });
@@ -849,9 +855,9 @@ class PomodoroPlugin extends obsidian.Plugin {
         var elapsedMin = Math.max(1, Math.floor(self.state.elapsed / 60));
         var secs = logFull ? self.state.total : (elapsedMin * 60);
         self._logToJournal(self.state.task || 'بدون عنوان', secs);
-        clearTimeout(self._timer);
-        self.state.running = false;
-        if(self.view) self.view.refresh();
+        // resetSession صدا می‌زنیم تا startTimeStr هم پاک بشه —
+        // بدون این، سشن بعدی همون تایم شروع قبلی رو ثبت می‌کرد
+        self.resetSession();
     }
 
     _bell() {
@@ -918,6 +924,12 @@ class PomodoroPlugin extends obsidian.Plugin {
 
     async _logToJournal(desc, actualSecs) {
         try {
+            // تایم شروع و اطلاعات state رو قبل از هر await ذخیره می‌کنیم —
+            // چون بعد از await، ممکنه resetSession صدا زده شده باشه و state پاک شده باشه
+            var timeStr  = this.state.startTimeStr || nowTime();
+            var stateCat = this.state.cat;
+            var stateProject = this.state.project;
+
             // مسیر رو از تنظیمات Daily Notes اوبسیدین می‌خونیم
             var cfg      = getDailyNoteConfig(this.app);
             var fileName = window.moment().format(cfg.format) + '.md';
@@ -936,14 +948,13 @@ class PomodoroPlugin extends obsidian.Plugin {
 
             // لیبل دسته‌بندی (با ایموجی)
             var activeCats = (this.settings.categories && this.settings.categories.length) ? this.settings.categories : DEFAULT_CATEGORIES;
-            var catLabel = this.state.cat;
+            var catLabel = stateCat;
             for(var ci = 0; ci < activeCats.length; ci++){
-                if(activeCats[ci].v === this.state.cat){ catLabel = activeCats[ci].l; break; }
+                if(activeCats[ci].v === stateCat){ catLabel = activeCats[ci].l; break; }
             }
 
             // سطر جدید
-            var timeStr = this.state.startTimeStr || nowTime();
-            var newRow = '| ' + timeStr + ' | ' + catLabel + ' | ' + this.state.project + ' | ' + desc + ' | ' + dur + ' |';
+            var newRow = '| ' + timeStr + ' | ' + catLabel + ' | ' + stateProject + ' | ' + desc + ' | ' + dur + ' |';
             var heading = this.settings.journalHeading || DEFAULT_SETTINGS.journalHeading;
 
             var lines = content.split('\n');
