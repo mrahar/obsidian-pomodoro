@@ -1261,15 +1261,53 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
 
         function renderHierList() {
             hierList.empty();
+
+            // ── ایندکس‌های drag در حال انجام ──
+            var catDrag = { src: null };
+
             p.settings.categories.forEach(function(cat, catIdx){
                 // ── کارت دسته‌بندی ──
                 var card = hierList.createEl('div', {cls:'pj-hier-card'});
+                card.draggable = true;
+
+                // رویدادهای drag کارت
+                card.addEventListener('dragstart', function(e){
+                    catDrag.src = catIdx;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', 'cat');
+                    setTimeout(function(){ card.classList.add('pj-dragging'); }, 0);
+                });
+                card.addEventListener('dragend', function(){
+                    card.classList.remove('pj-dragging');
+                    hierList.querySelectorAll('.pj-drag-over').forEach(function(el){ el.classList.remove('pj-drag-over'); });
+                });
+                card.addEventListener('dragover', function(e){
+                    if(e.dataTransfer.getData && e.dataTransfer.types.indexOf('text/plain') === -1) return;
+                    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+                    if(catDrag.src !== catIdx) card.classList.add('pj-drag-over');
+                });
+                card.addEventListener('dragleave', function(e){
+                    if(!card.contains(e.relatedTarget)) card.classList.remove('pj-drag-over');
+                });
+                card.addEventListener('drop', async function(e){
+                    e.preventDefault(); e.stopPropagation();
+                    card.classList.remove('pj-drag-over');
+                    var src = catDrag.src;
+                    if(src === null || src === catIdx) return;
+                    var moved = p.settings.categories.splice(src, 1)[0];
+                    p.settings.categories.splice(catIdx, 0, moved);
+                    await p._saveSettings(); renderHierList();
+                    if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+                });
 
                 // هدر کارت
                 var header = card.createEl('div', {cls:'pj-hier-header'});
+                var grip = header.createEl('span', {cls:'pj-drag-grip', text:'⠿'});
+                grip.title = 'بکش تا ترتیب رو عوض کنی';
                 var catInp = header.createEl('input', {cls:'pj-hier-cat-inp'});
                 catInp.value = cat.l; catInp.placeholder = 'مثلاً 📖 مطالعه کتاب';
-                catInp.title = 'برای تغییر نام کلیک کن';
+                // جلوگیری از شروع drag موقع کلیک روی input
+                catInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
                 catInp.onchange = async function(){
                     var newL = catInp.value.trim(); if(!newL) return;
                     cat.l = newL; await p._saveSettings();
@@ -1277,6 +1315,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 };
                 var catDel = header.createEl('button', {cls:'pj-hier-del-btn'});
                 catDel.innerHTML = '🗑️'; catDel.title = 'حذف این دسته‌بندی';
+                catDel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
                 catDel.onclick = async function(){
                     p.settings.categories.splice(catIdx, 1);
                     await p._saveSettings(); renderHierList();
@@ -1287,14 +1326,51 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 // بدنه‌ی کارت — زیرمجموعه‌ها
                 if(!cat.items) cat.items = [];
                 var body = card.createEl('div', {cls:'pj-hier-body'});
+                var itemDrag = { src: null };
 
                 if(cat.items.length === 0){
                     body.createEl('p', {text:'هنوز زیرمجموعه‌ای اضافه نشده', cls:'pj-hier-empty'});
                 }
                 cat.items.forEach(function(item, itemIdx){
                     var itemRow = body.createEl('div', {cls:'pj-hier-item'});
+                    itemRow.draggable = true;
+
+                    // رویدادهای drag آیتم
+                    itemRow.addEventListener('dragstart', function(e){
+                        e.stopPropagation(); // جلوگیری از trigger شدن drag کارت
+                        itemDrag.src = itemIdx;
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', 'item');
+                        setTimeout(function(){ itemRow.classList.add('pj-dragging'); }, 0);
+                    });
+                    itemRow.addEventListener('dragend', function(){
+                        itemRow.classList.remove('pj-dragging');
+                        body.querySelectorAll('.pj-drag-over').forEach(function(el){ el.classList.remove('pj-drag-over'); });
+                    });
+                    itemRow.addEventListener('dragover', function(e){
+                        e.preventDefault(); e.stopPropagation();
+                        e.dataTransfer.dropEffect = 'move';
+                        if(itemDrag.src !== itemIdx) itemRow.classList.add('pj-drag-over');
+                    });
+                    itemRow.addEventListener('dragleave', function(){
+                        itemRow.classList.remove('pj-drag-over');
+                    });
+                    itemRow.addEventListener('drop', async function(e){
+                        e.preventDefault(); e.stopPropagation();
+                        itemRow.classList.remove('pj-drag-over');
+                        var src = itemDrag.src;
+                        if(src === null || src === itemIdx) return;
+                        var moved = cat.items.splice(src, 1)[0];
+                        cat.items.splice(itemIdx, 0, moved);
+                        await p._saveSettings(); renderHierList();
+                        if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
+                    });
+
+                    var itemGrip = itemRow.createEl('span', {cls:'pj-drag-grip pj-drag-grip--sm', text:'⠿'});
+                    itemGrip.title = 'بکش تا ترتیب رو عوض کنی';
                     var itemInp = itemRow.createEl('input', {cls:'pj-hier-item-inp'});
                     itemInp.value = item;
+                    itemInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
                     itemInp.onchange = async function(){
                         var n = itemInp.value.trim(); if(!n) return;
                         cat.items[itemIdx] = n; await p._saveSettings();
@@ -1302,6 +1378,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                     };
                     var itemDel = itemRow.createEl('button', {cls:'pj-hier-item-del'});
                     itemDel.innerHTML = '×'; itemDel.title = 'حذف';
+                    itemDel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
                     itemDel.onclick = async function(){
                         cat.items.splice(itemIdx, 1); await p._saveSettings();
                         renderHierList();
@@ -1313,6 +1390,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 var addRow = body.createEl('div', {cls:'pj-hier-add-row'});
                 var addInp = addRow.createEl('input', {cls:'pj-hier-item-inp'});
                 addInp.placeholder = '+ زیرمجموعه‌ی جدید را بنویس';
+                addInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
                 var addBtn = addRow.createEl('button', {text:'افزودن', cls:'pj-cat-add-btn'});
                 addBtn.onclick = async function(){
                     var label = addInp.value.trim(); if(!label) return;

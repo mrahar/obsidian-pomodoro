@@ -698,6 +698,35 @@
     padding-top: 4px;
 }
 
+/* ══ drag & drop ══ */
+.pj-drag-grip {
+    cursor: grab;
+    color: var(--text-faint);
+    font-size: 15px;
+    padding: 0 4px 0 0;
+    user-select: none;
+    opacity: 0.35;
+    flex-shrink: 0;
+    transition: opacity .15s;
+    line-height: 1;
+}
+.pj-drag-grip:hover { opacity: 0.9; }
+.pj-drag-grip--sm { font-size: 12px; padding: 0 3px 0 0; }
+
+.pj-dragging {
+    opacity: 0.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.pj-hier-card.pj-drag-over {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 25%, transparent);
+}
+.pj-hier-item.pj-drag-over {
+    background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+    border-radius: 5px;
+    outline: 1px dashed var(--interactive-accent);
+}
+
 /* ══ دکمه‌ی رد استراحت ══ */
 .pj-skip-break-btn {
     width: 100%;
