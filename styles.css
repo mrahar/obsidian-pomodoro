@@ -735,11 +735,12 @@
 }
 .pj-tag-inp::placeholder { color: var(--text-faint); }
 
-/* افزودن دسته‌ی جدید */
+/* افزودن دسته‌ی جدید — هر دو ستون */
 .pj-acc-add-cat {
     display: flex; gap: 6px;
     padding: 8px 0 2px;
     direction: rtl;
+    grid-column: 1 / -1;
 }
 
 /* ══ drag & drop ══ */

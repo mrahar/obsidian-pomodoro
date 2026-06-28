@@ -1322,15 +1322,20 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 // input افزودن زیرمجموعه
                 var addInp = tags.createEl('input', {cls: 'pj-tag-inp'});
                 addInp.placeholder = '+ اضافه کن…';
+                var _adding = false; // جلوگیری از double-save (blur بعد از Enter)
                 var doAdd = async function() {
+                    if(_adding) return;
                     var v = addInp.value.trim(); if(!v) return;
+                    _adding = true;
                     if(!cat.items) cat.items = [];
                     if(cat.items.indexOf(v) === -1) cat.items.push(v);
                     addInp.value = '';
-                    openCats.add(cat.v); // بعد از rebuild باز بمونه
+                    openCats.add(cat.v);
                     await p._saveSettings(); renderAcc(); syncPanel();
                 };
                 addInp.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); doAdd(); } };
+                // ذخیره هنگام کلیک جای دیگه (blur)
+                addInp.onblur = function(){ doAdd(); };
                 addInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
             });
 
