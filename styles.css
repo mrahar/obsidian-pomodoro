@@ -32,37 +32,36 @@
 .pj-pane[data-type="short"] { --pj-accent: var(--pj-short); }
 .pj-pane[data-type="long"]  { --pj-accent: var(--pj-long);  }
 
-/* ══ تب‌بار ══ */
+/* ══ تب‌بار — Notion style ══ */
 .pj-tabbar {
     display: flex;
-    border-bottom: 1px solid var(--pj-border);
+    border-bottom: 1px solid rgba(128,128,128,.12);
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--pj-bg);
-    padding: 0 8px;
-    gap: 4px;
+    background: var(--background-primary);
+    padding: 0 12px;
+    gap: 2px;
 }
 .pj-tb {
     flex: 1;
     background: none;
     border: none;
-    border-bottom: 2.5px solid transparent;
-    padding: 11px 0 9px;
+    border-bottom: 2px solid transparent;
+    padding: 10px 0 8px;
     font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12.5px;
+    font-weight: 500;
     color: var(--text-faint);
     cursor: pointer;
-    letter-spacing: .3px;
-    transition: color .2s, border-color .2s;
+    transition: color .15s, border-color .15s;
     margin-bottom: -1px;
 }
 .pj-tb:hover { color: var(--text-muted); }
-.pj-tb.active {
-    color: var(--pj-accent);
-    border-bottom-color: var(--pj-accent);
-}
+/* active tab — کهربایی برای هر دو تم */
+.pj-tb.active { border-bottom-color: rgba(245,158,11,.8); }
+.theme-dark  .pj-tb.active { color: #fcd34d; }
+.theme-light .pj-tb.active { color: #b45309; }
 
 /* ══ پنل تایمر ══ */
 .pj-pane {
@@ -75,43 +74,43 @@
 }
 .pj-pane-sound { align-items: stretch; gap: 10px; }
 
-/* ══ session pills ══ */
+/* ══ session pills — Notion style ══ */
 .pj-sess-row {
     display: flex;
-    gap: 0;
-    background: var(--pj-card);
-    border-radius: 50px;
-    padding: 3px;
+    gap: 3px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    padding: 4px;
     width: 100%;
 }
 .pj-sess-btn {
     flex: 1;
     background: none;
     border: none;
-    border-radius: 50px;
-    padding: 7px 6px;
+    border-radius: 6px;
+    padding: 6px 6px;
     font-family: inherit;
     font-size: 11.5px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-faint);
     cursor: pointer;
-    transition: all .2s;
+    transition: all .18s;
     white-space: nowrap;
-    letter-spacing: .2px;
 }
-.pj-sess-btn:hover { color: var(--text-muted); }
+.pj-sess-btn:hover { color: var(--text-muted); background: var(--background-modifier-hover); }
 .pj-sess-btn.active {
-    background: var(--pj-bg);
+    background: var(--background-primary);
     color: var(--pj-accent);
-    box-shadow: 0 1px 6px rgba(0,0,0,.14);
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    font-weight: 600;
 }
 
-/* ══ وضعیت ══ */
+/* ══ وضعیت — Notion caption style ══ */
 .pj-status {
-    font-size: 12.5px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 500;
     color: var(--text-faint);
-    letter-spacing: .8px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     margin-bottom: -6px;
 }
@@ -211,14 +210,13 @@
     transform: scale(1.2);
 }
 
-/* ══ فرم کارت ══ */
+/* ══ فرم کارت — Notion block style ══ */
 .pj-form-card {
     width: 100%;
-    background: var(--pj-card);
-    border-radius: var(--pj-radius);
+    background: var(--background-secondary);
+    border-radius: 8px;
     overflow: hidden;
-    border: 1px solid var(--pj-border);
-    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    border: none;
 }
 
 /* فیلد با label */
@@ -226,19 +224,21 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    padding: 10px 14px 11px;
-    border-bottom: 1px solid var(--pj-border);
+    padding: 9px 14px 10px;
+    border-bottom: 1px solid rgba(128,128,128,.1);
     transition: background .15s;
 }
-.pj-field:focus-within { background: color-mix(in srgb, var(--pj-accent) 4%, var(--pj-card)); }
-.pj-field--last { border-bottom: none; }
+/* focus: کهربایی نیمه‌شفاف — هر دو تم */
+.pj-field:focus-within { background: rgba(245,158,11,.05); }
+.pj-field--last  { border-bottom: none; }
 .pj-field--slider { border-bottom: none; }
+.pj-field--cat   { padding-bottom: 10px; }
 
 .pj-field-label {
     font-family: inherit;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .7px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .8px;
     color: var(--text-faint);
     margin-bottom: 4px;
     text-transform: uppercase;
@@ -324,51 +324,50 @@
     border: none;
 }
 
-/* ══ ردیف پایین ══ */
+/* ══ ردیف پایین — Notion chip style ══ */
 .pj-bottom-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
 }
 .pj-icon-btn {
-    background: var(--pj-card);
-    border: 1px solid var(--pj-border);
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
+    background: var(--background-secondary);
+    border: none;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
+    color: var(--text-faint);
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
-    transition: color .2s, background .2s;
+    transition: color .15s, background .15s;
 }
 .pj-icon-btn:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
 
 .pj-log-btn {
     flex: 1;
-    background: var(--pj-card);
-    border: 1px solid var(--pj-border);
-    border-radius: 50px;
-    padding: 8px 10px;
+    background: var(--background-secondary);
+    border: none;
+    border-radius: 6px;
+    padding: 7px 10px;
     font-family: inherit;
     font-size: 11.5px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-muted);
     cursor: pointer;
     text-align: center;
-    transition: all .18s;
+    transition: all .15s;
     white-space: nowrap;
 }
-.pj-log-btn:hover {
-    color: var(--pj-accent);
-    border-color: var(--pj-accent);
-    background: color-mix(in srgb, var(--pj-accent) 8%, var(--pj-card));
-}
-.pj-log-elapsed { opacity: .45; }
+/* hover کهربایی — هر دو تم */
+.pj-log-btn:hover { background: rgba(245,158,11,.12); }
+.theme-dark  .pj-log-btn:hover { color: #fcd34d; }
+.theme-light .pj-log-btn:hover { color: #b45309; }
+.pj-log-elapsed { opacity: .4; }
 .pj-log-elapsed:hover { opacity: 1; }
 
 /* ══════════════════════════════════════════════
@@ -769,23 +768,21 @@
     outline: 1px dashed var(--interactive-accent);
 }
 
-/* ══ دکمه‌ی رد استراحت ══ */
+/* ══ دکمه‌ی رد استراحت — Notion style ══ */
 .pj-skip-break-btn {
     width: 100%;
-    background: color-mix(in srgb, var(--pj-accent) 10%, var(--pj-card));
-    border: 1.5px solid var(--pj-accent);
-    border-radius: 50px;
-    padding: 10px 14px;
+    background: rgba(245,158,11,.1);
+    border: 1px solid rgba(245,158,11,.3);
+    border-radius: 8px;
+    padding: 9px 14px;
     font-family: inherit;
     font-size: 12.5px;
-    font-weight: 700;
-    color: var(--pj-accent);
+    font-weight: 600;
     cursor: pointer;
     text-align: center;
-    transition: background .18s, transform .12s;
-    letter-spacing: .2px;
+    transition: background .15s, transform .12s;
 }
-.pj-skip-break-btn:hover {
-    background: color-mix(in srgb, var(--pj-accent) 20%, var(--pj-card));
-}
-.pj-skip-break-btn:active { transform: scale(.97); }
+.theme-dark  .pj-skip-break-btn { color: #fcd34d; }
+.theme-light .pj-skip-break-btn { color: #b45309; }
+.pj-skip-break-btn:hover { background: rgba(245,158,11,.18); }
+.pj-skip-break-btn:active { transform: scale(.98); }
