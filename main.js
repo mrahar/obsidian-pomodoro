@@ -1138,10 +1138,15 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
         el.empty();
         el.setAttribute('dir', 'rtl');
 
-        // ── تایمر ──
-        el.createEl('h3', {text: '⏱️ تایمر'});
+        // ── grid دو ستونه ──
+        var grid = el.createEl('div', {cls: 'pj-settings-grid'});
+        var c1   = grid.createEl('div', {cls: 'pj-settings-col'}); // تایمر + ژورنال + صدا
+        var c2   = grid.createEl('div', {cls: 'pj-settings-col'}); // دسته‌بندی‌ها
 
-        new obsidian.Setting(el)
+        // ── ستون ۱: تایمر ──
+        c1.createEl('h3', {text: '⏱️ تایمر', cls: 'pj-settings-h3'});
+
+        new obsidian.Setting(c1)
             .setName('مدت سشن کاری')
             .setDesc('به دقیقه — پیش‌فرض: ۲۵')
             .addText(function(t){
@@ -1155,7 +1160,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('مدت استراحت کوتاه')
             .setDesc('به دقیقه — پیش‌فرض: ۵')
             .addText(function(t){
@@ -1169,7 +1174,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('مدت استراحت بلند')
             .setDesc('به دقیقه — پیش‌فرض: ۱۵')
             .addText(function(t){
@@ -1183,7 +1188,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('شروع خودکار استراحت')
             .setDesc('بعد از اتمام سشن کاری، استراحت رو خودکار شروع کن')
             .addToggle(function(t){
@@ -1194,7 +1199,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('شروع خودکار سشن کاری')
             .setDesc('بعد از اتمام استراحت، سشن کاری رو خودکار شروع کن')
             .addToggle(function(t){
@@ -1205,10 +1210,10 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        // ── ژورنال ──
-        el.createEl('h3', {text: '📓 ثبت در ژورنال'});
+        // ── ستون ۱: ژورنال ──
+        c1.createEl('h3', {text: '📓 ثبت در ژورنال', cls: 'pj-settings-h3'});
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('ثبت خودکار پس از اتمام سشن')
             .setDesc('وقتی تایمر تموم شد، بدون سوال در نت روزانه ثبت کنه')
             .addToggle(function(t){
@@ -1219,7 +1224,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('عنوان بخش پومودورو در نت روزانه')
             .setDesc('هدینگی که پلاگین دنبالش می‌گرده تا جدول رو پیدا کنه')
             .addText(function(t){
@@ -1231,10 +1236,10 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        // ── صدا ──
-        el.createEl('h3', {text: '🔔 صدا'});
+        // ── ستون ۱: صدا ──
+        c1.createEl('h3', {text: '🔔 صدا', cls: 'pj-settings-h3'});
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c1)
             .setName('پخش bell هنگام اتمام سشن')
             .setDesc('یه صدای آروم برای اعلام پایان هر سشن (کار یا استراحت)')
             .addToggle(function(t){
@@ -1245,14 +1250,31 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 });
             });
 
-        // ── دسته‌بندی‌ها — accordion + chip tags ──
-        el.createEl('h3', {text: '📋 دسته‌بندی‌ها'});
+        // ── ستون ۱: ریست ──
+        c1.createEl('h3', {text: '⚙️ بازنشانی', cls: 'pj-settings-h3'});
+        new obsidian.Setting(c1)
+            .setName('بازگشت به تنظیمات پیش‌فرض')
+            .setDesc('همه‌ی تنظیمات (شامل دسته‌بندی‌ها) رو به مقدار اولیه برگردون')
+            .addButton(function(b){
+                b.setButtonText('ریست کامل').setWarning();
+                b.onClick(async function(){
+                    p.settings = Object.assign({}, DEFAULT_SETTINGS, {
+                        categories: DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); })
+                    });
+                    openCats.clear();
+                    await p._saveSettings(); renderAcc(); syncPanel();
+                    new obsidian.Notice('✅ تنظیمات به پیش‌فرض برگشت', 3000);
+                });
+            });
+
+        // ── ستون ۲: دسته‌بندی‌ها — accordion + chip tags ──
+        c2.createEl('h3', {text: '📋 دسته‌بندی‌ها', cls: 'pj-settings-h3'});
 
         if(!p.settings.categories || !p.settings.categories.length)
             p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); });
         p.settings.categories.forEach(function(c){ if(!c.items) c.items = []; });
 
-        var accList = el.createEl('div', {cls:'pj-acc-list'});
+        var accList = c2.createEl('div', {cls:'pj-acc-list'});
         var openCats = new Set(); // کدوم دسته‌ها باز هستن
         var catDrag  = { src: null };
 
@@ -1299,7 +1321,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
 
                 // ▶/▼ chevron (کلیک برای باز/بستن)
                 var chevron = hdr.createEl('button', {cls: 'pj-acc-chevron'});
-                chevron.innerHTML = isOpen ? '▾' : '▸';
+                chevron.innerHTML = isOpen ? '▼' : '▶';
                 chevron.onclick = function() {
                     if(isOpen) openCats.delete(cat.v); else openCats.add(cat.v);
                     renderAcc();
@@ -1381,7 +1403,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
         }
         renderAcc();
 
-        new obsidian.Setting(el)
+        new obsidian.Setting(c2)
             .setName('بازگشت به دسته‌های پیش‌فرض')
             .setDesc('همه‌ی دسته‌بندی‌ها و زیرمجموعه‌هاشون پاک و به حالت اولیه برمی‌گردن')
             .addButton(function(b){
@@ -1391,23 +1413,6 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                     openCats.clear();
                     await p._saveSettings(); renderAcc(); syncPanel();
                     new obsidian.Notice('✅ دسته‌بندی‌ها به پیش‌فرض برگشت', 3000);
-                });
-            });
-
-        // ── دکمه‌ی ریست کل تنظیمات ──
-        el.createEl('h3', {text: '⚙️ بازنشانی'});
-        new obsidian.Setting(el)
-            .setName('بازگشت به تنظیمات پیش‌فرض')
-            .setDesc('همه‌ی تنظیمات (شامل دسته‌بندی‌ها) رو به مقدار اولیه برگردون')
-            .addButton(function(b){
-                b.setButtonText('ریست کامل').setWarning();
-                b.onClick(async function(){
-                    p.settings = Object.assign({}, DEFAULT_SETTINGS, {
-                        categories: DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); })
-                    });
-                    openCats.clear();
-                    await p._saveSettings(); renderAcc(); syncPanel();
-                    new obsidian.Notice('✅ تنظیمات به پیش‌فرض برگشت', 3000);
                 });
             });
     }

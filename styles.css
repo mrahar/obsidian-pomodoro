@@ -503,6 +503,42 @@
 }
 
 /* ══════════════════════════════════════════════
+   layout دو ستونه‌ی settings
+   ══════════════════════════════════════════════ */
+.pj-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 32px;
+    align-items: start;
+}
+/* جداکننده‌ی عمودی بین دو ستون */
+.pj-settings-col:first-child {
+    border-left: 1px solid var(--background-modifier-border);
+    padding-left: 24px;
+}
+.pj-settings-col:last-child {
+    padding-right: 4px;
+}
+/* عنوان‌های بخش */
+.pj-settings-h3 {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text-muted) !important;
+    margin: 20px 0 4px !important;
+    padding: 0 !important;
+    border: none !important;
+}
+.pj-settings-h3:first-child { margin-top: 4px !important; }
+
+/* روی صفحه‌های باریک: تک‌ستون بشه */
+@media (max-width: 700px) {
+    .pj-settings-grid { grid-template-columns: 1fr; }
+    .pj-settings-col:first-child { border-left: none; padding-left: 0; }
+}
+
+/* ══════════════════════════════════════════════
    مدیریت دسته‌بندی در settings
    ══════════════════════════════════════════════ */
 .pj-cat-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
@@ -635,10 +671,10 @@
 
 .pj-acc-chevron {
     background: none !important; border: none;
-    font-size: 10px;
-    color: var(--text-faint);
-    cursor: pointer; padding: 0 2px; flex-shrink: 0;
-    font-family: monospace; line-height: 1;
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer; padding: 0 3px; flex-shrink: 0;
+    line-height: 1;
     transition: color .15s;
 }
 .pj-acc-chevron:hover { color: var(--text-normal); }
