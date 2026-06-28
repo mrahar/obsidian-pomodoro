@@ -619,10 +619,7 @@
     overflow: hidden;
     transition: background .15s;
 }
-/* وقتی باز هست، هر دو ستون رو بپوشونه */
-.pj-acc-item.pj-acc-open {
-    grid-column: 1 / -1;
-}
+/* وقتی باز هست، همون جای خودش بمونه — فقط بلندتر میشه */
 .pj-acc-item.pj-drag-over {
     outline: 1px solid var(--interactive-accent);
     background: var(--background-modifier-hover);
