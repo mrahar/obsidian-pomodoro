@@ -524,14 +524,14 @@
 .pj-cat-add-btn {
     font-family: inherit; font-size: 12px; font-weight: 600;
     padding: 5px 12px; border-radius: 20px;
-    border: 1px solid rgba(56,189,248,.35);
-    background: rgba(56,189,248,.08);
-    color: #38bdf8;
+    border: 1px solid var(--interactive-accent);
+    background: transparent;
+    color: var(--interactive-accent);
     cursor: pointer; white-space: nowrap; transition: all .15s;
 }
 .pj-cat-add-btn:hover {
-    background: rgba(56,189,248,.15);
-    border-color: rgba(56,189,248,.5);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
 }
 
 /* ══════════════════════════════════════════════
@@ -546,14 +546,14 @@
     margin-top: 7px;
 }
 .pj-chip {
-    background: rgba(56,189,248,.07);
-    border: 1px solid rgba(56,189,248,.2);
+    background: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-border);
     border-radius: 20px;
     padding: 3px 10px;
     font-family: inherit;
     font-size: 10.5px;
     font-weight: 500;
-    color: #7dd3fc;
+    color: var(--text-muted);
     cursor: pointer;
     transition: all .15s;
     display: inline-flex;
@@ -562,14 +562,12 @@
     line-height: 1.5;
 }
 .pj-chip:hover {
-    background: rgba(56,189,248,.15);
-    border-color: rgba(56,189,248,.4);
-    color: #38bdf8;
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
 }
 .pj-chip--danger:hover {
-    color: #e05c5c;
-    border-color: rgba(224,92,92,.4);
-    background: rgba(224,92,92,.08);
+    color: var(--text-error);
+    border-color: var(--text-error);
 }
 .pj-chip-inp {
     display: block;
@@ -579,7 +577,7 @@
     font-size: 12.5px;
     border: 1px solid var(--interactive-accent);
     border-radius: 6px;
-    background: var(--pj-bg);
+    background: var(--background-primary);
     color: var(--text-normal);
     padding: 4px 8px;
     direction: rtl;
@@ -588,14 +586,14 @@
 }
 
 /* ══════════════════════════════════════════════
-   accordion — Notion Dark (sky blue #38bdf8)
+   accordion — Notion Dark (theme-aware: light + dark)
    ══════════════════════════════════════════════ */
 .pj-acc-list {
     display: flex; flex-direction: column;
     gap: 0; margin-bottom: 10px;
 }
 
-/* هر آیتم accordion — دقیقاً مثل موکاپ notion */
+/* هر آیتم accordion — رادیوس گرد مثل Notion */
 .pj-acc-item {
     border-radius: 6px;
     margin: 2px 0;
@@ -603,8 +601,8 @@
     transition: background .15s;
 }
 .pj-acc-item.pj-drag-over {
-    outline: 1px solid rgba(56,189,248,.5);
-    background: rgba(56,189,248,.04);
+    outline: 1px solid var(--interactive-accent);
+    background: var(--background-modifier-hover);
 }
 
 /* header */
@@ -619,49 +617,51 @@
     border-radius: 6px;
     transition: background .15s;
 }
-.pj-acc-hdr:hover { background: rgba(255,255,255,.05); }
+.pj-acc-hdr:hover { background: var(--background-modifier-hover); }
 
 .pj-acc-chevron {
     background: none; border: none;
     font-size: 10px;
-    color: rgba(255,255,255,.3);
+    color: var(--text-faint);
     cursor: pointer; padding: 0 2px; flex-shrink: 0;
     font-family: monospace; line-height: 1;
     transition: color .15s;
 }
-.pj-acc-chevron:hover { color: rgba(255,255,255,.7); }
+.pj-acc-chevron:hover { color: var(--text-normal); }
 
 .pj-acc-name {
     flex: 1;
     font-family: inherit; font-size: 13.5px; font-weight: 500;
     border: none; background: none;
-    color: rgba(255,255,255,.85);
+    color: var(--text-normal);
     padding: 0; outline: none;
     direction: rtl; min-width: 0;
 }
-.pj-acc-name:focus { border-bottom: 1px solid rgba(56,189,248,.5); }
+.pj-acc-name:focus { border-bottom: 1px solid var(--interactive-accent); }
 
+/* badge — کهربایی (روی هر دو تم خوانا) */
 .pj-acc-badge {
     font-size: 10.5px; font-weight: 600;
-    color: rgba(56,189,248,.85);
-    background: rgba(56,189,248,.12);
+    background: rgba(245,158,11,.14);
     border-radius: 20px; padding: 1px 8px;
     flex-shrink: 0;
 }
+.theme-dark  .pj-acc-badge { color: #fcd34d; }
+.theme-light .pj-acc-badge { color: #b45309; }
 
 .pj-acc-del {
     background: none; border: none;
     font-size: 15px; line-height: 1;
-    color: rgba(255,255,255,.2);
+    color: var(--text-faint);
     cursor: pointer; padding: 0 2px;
     transition: color .15s; flex-shrink: 0;
 }
-.pj-acc-del:hover { color: #e05c5c; }
+.pj-acc-del:hover { color: var(--text-error); }
 
 /* body — chip tags */
 .pj-acc-body {
     margin: 0 0 4px 0;
-    background: rgba(255,255,255,.04);
+    background: var(--background-secondary);
     border-radius: 0 0 6px 6px;
     padding: 8px 10px 10px;
 }
@@ -671,34 +671,46 @@
     direction: rtl; align-items: center;
 }
 
+/* chip پایه */
 .pj-tag {
     display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(56,189,248,.12);
     border-radius: 20px;
     padding: 3px 10px 3px 6px;
     font-family: inherit; font-size: 12px; font-weight: 500;
-    color: #7dd3fc;
     transition: filter .15s;
 }
-.pj-tag:hover { filter: brightness(1.15); }
-
+.pj-tag:hover { filter: brightness(1.08); }
 .pj-tag-text { line-height: 1.3; }
-
 .pj-tag-x {
     background: none; border: none;
     font-size: 13px; line-height: 1;
-    color: #7dd3fc; cursor: pointer; padding: 0;
-    opacity: .45; transition: opacity .12s;
+    color: inherit; cursor: pointer; padding: 0;
+    opacity: .5; transition: opacity .12s;
 }
 .pj-tag-x:hover { opacity: 1; }
+
+/* رنگ‌های چرخشی chip — مثل Notion (کهربایی/ایندیگو/سبز/صورتی) */
+.pj-tag-c0 { background: rgba(245,158,11,.15); }
+.pj-tag-c1 { background: rgba(99,102,241,.15); }
+.pj-tag-c2 { background: rgba(34,197,94,.14); }
+.pj-tag-c3 { background: rgba(236,72,153,.14); }
+/* متنِ chip — تیره‌تر در تم روشن، روشن‌تر در تم تیره (برای کنتراست) */
+.theme-dark  .pj-tag-c0 { color: #fcd34d; }
+.theme-dark  .pj-tag-c1 { color: #a5b4fc; }
+.theme-dark  .pj-tag-c2 { color: #86efac; }
+.theme-dark  .pj-tag-c3 { color: #f9a8d4; }
+.theme-light .pj-tag-c0 { color: #b45309; }
+.theme-light .pj-tag-c1 { color: #4338ca; }
+.theme-light .pj-tag-c2 { color: #15803d; }
+.theme-light .pj-tag-c3 { color: #be185d; }
 
 .pj-tag-inp {
     border: none; background: none; outline: none;
     font-family: inherit; font-size: 12px;
-    color: rgba(255,255,255,.7); direction: rtl;
+    color: var(--text-normal); direction: rtl;
     min-width: 90px; max-width: 150px; padding: 3px 0;
 }
-.pj-tag-inp::placeholder { color: rgba(56,189,248,.4); }
+.pj-tag-inp::placeholder { color: var(--text-faint); }
 
 /* افزودن دسته‌ی جدید */
 .pj-acc-add-cat {

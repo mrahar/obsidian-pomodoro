@@ -1340,7 +1340,8 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
 
                 if(!cat.items) cat.items = [];
                 cat.items.forEach(function(sub, subIdx) {
-                    var tag = tags.createEl('span', {cls: 'pj-tag'});
+                    // رنگِ chip بر اساس ایندکس می‌چرخه (مثل Notion) — c0..c3
+                    var tag = tags.createEl('span', {cls: 'pj-tag pj-tag-c' + (subIdx % 4)});
                     tag.createEl('span', {cls: 'pj-tag-text', text: sub});
                     var x = tag.createEl('button', {cls: 'pj-tag-x', text: '×'});
                     x.onclick = async function() {
