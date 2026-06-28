@@ -579,6 +579,32 @@
     box-sizing: border-box;
 }
 
+/* ══════════════════════════════════════════════
+   ساختار درختی دسته‌بندی‌ها در settings
+   ══════════════════════════════════════════════ */
+.pj-hier-list { display:flex; flex-direction:column; gap:0; margin-bottom:10px; }
+.pj-hier-cat-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 0 3px;
+    border-top: 1px solid var(--pj-border);
+}
+.pj-hier-cat-row:first-child { border-top: none; }
+.pj-hier-items {
+    padding-right: 12px;
+    margin-right: 6px;
+    margin-bottom: 4px;
+    border-right: 2px solid var(--pj-border);
+    display: flex; flex-direction: column; gap: 3px;
+}
+.pj-hier-item-row { display:flex; align-items:center; gap:4px; }
+.pj-hier-bullet {
+    color: var(--text-faint); font-size: 11px;
+    flex-shrink: 0; font-family: monospace; user-select: none;
+}
+.pj-hier-item-inp { font-size: 12px; }
+.pj-hier-add-item-row { opacity: 0.6; transition: opacity .15s; }
+.pj-hier-add-item-row:focus-within { opacity: 1; }
+
 /* ══ دکمه‌ی رد استراحت ══ */
 .pj-skip-break-btn {
     width: 100%;
