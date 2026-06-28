@@ -55,19 +55,20 @@ var SESSIONS = {
     long:  { label: '🌿 استراحت بلند'  }
 };
 
+// هر دسته‌بندی می‌تونه items داشته باشه — زیرمجموعه‌هایی که کاربر اضافه می‌کنه
 var DEFAULT_CATEGORIES = [
-    { v:'مطالعه-کتاب',    l:'📖 مطالعه کتاب'      },
-    { v:'دوره-ویدئویی',   l:'🎬 دوره ویدئویی'     },
-    { v:'فیلم-سریال',     l:'🎥 فیلم / سریال'     },
-    { v:'پروژه-کاری',     l:'💼 پروژه کاری'       },
-    { v:'برنامه‌نویسی',   l:'💻 برنامه‌نویسی'     },
-    { v:'نوشتن',          l:'✍️ نوشتن / ژورنال'   },
-    { v:'تحقیق',          l:'🔍 تحقیق و بررسی'    },
-    { v:'جلسه-تماس',      l:'📞 جلسه / تماس'      },
-    { v:'مطالعه-مقاله',   l:'📄 مطالعه مقاله'     },
-    { v:'ورزش',           l:'🏋️ ورزش'             },
-    { v:'برنامه‌ریزی',    l:'🗂️ برنامه‌ریزی'      },
-    { v:'دیگر',           l:'📌 دیگر'              }
+    { v:'مطالعه-کتاب',    l:'📖 مطالعه کتاب',     items:[] },
+    { v:'دوره-ویدئویی',   l:'🎬 دوره ویدئویی',    items:[] },
+    { v:'فیلم-سریال',     l:'🎥 فیلم / سریال',    items:[] },
+    { v:'پروژه-کاری',     l:'💼 پروژه کاری',      items:[] },
+    { v:'برنامه‌نویسی',   l:'💻 برنامه‌نویسی',    items:[] },
+    { v:'نوشتن',          l:'✍️ نوشتن / ژورنال',  items:[] },
+    { v:'تحقیق',          l:'🔍 تحقیق و بررسی',   items:[] },
+    { v:'جلسه-تماس',      l:'📞 جلسه / تماس',     items:[] },
+    { v:'مطالعه-مقاله',   l:'📄 مطالعه مقاله',    items:[] },
+    { v:'ورزش',           l:'🏋️ ورزش',            items:[] },
+    { v:'برنامه‌ریزی',    l:'🗂️ برنامه‌ریزی',     items:[] },
+    { v:'دیگر',           l:'📌 دیگر',             items:[] }
 ];
 
 var DEFAULT_SETTINGS = {
@@ -253,7 +254,7 @@ class PomodoroView extends obsidian.ItemView {
         playBtn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>';
         self._startBtn = playBtn;
         playBtn.onclick = function(){
-            if(!p.state.running)    p.startSession(taskIn.value, projIn.value, catSel.value);
+            if(!p.state.running)    p.startSession(taskIn.value, p.state.project || '—', catSel.value);
             else if(p.state.paused) p.resumeSession();
             else                    p.pauseSession();
         };
@@ -267,29 +268,136 @@ class PomodoroView extends obsidian.ItemView {
         // ── ورودی‌ها ──
         var formCard = pane.createEl('div',{cls:'pj-form-card'});
 
-        // ۱. نوع کار
-        var catField = formCard.createEl('div',{cls:'pj-field'});
+        // ── helper: دسته‌بندی‌های فعال ──
+        function getActiveCats() {
+            return (p.settings.categories && p.settings.categories.length) ? p.settings.categories : DEFAULT_CATEGORIES;
+        }
+        function getCurCat() {
+            var v = catSel.value;
+            var cats = getActiveCats();
+            for(var i=0;i<cats.length;i++){ if(cats[i].v===v) return cats[i]; }
+            return null;
+        }
+
+        // ۱. نوع کار — dropdown تمیز + chips مدیریت زیرش
+        var catField = formCard.createEl('div',{cls:'pj-field pj-field--cat'});
         catField.createEl('label',{text:'نوع کار', cls:'pj-field-label'});
         var catSel = catField.createEl('select',{cls:'pj-field-select'});
-        var activeCats = (p.settings.categories && p.settings.categories.length) ? p.settings.categories : DEFAULT_CATEGORIES;
-        activeCats.forEach(function(c){ var o=catSel.createEl('option',{text:c.l}); o.value=c.v; });
-        catSel.onchange = function(){ p.state.cat = catSel.value; };
         self._catSel = catSel;
 
-        // ۲. پروژه
-        var projField = formCard.createEl('div',{cls:'pj-field'});
-        projField.createEl('label',{text:'پروژه', cls:'pj-field-label'});
-        var projIn = projField.createEl('input',{cls:'pj-field-input'});
-        projIn.type='text'; projIn.placeholder='نام پروژه (اختیاری)';
-        projIn.oninput = function(){ p.state.project = projIn.value.trim()||'—'; };
-        self._projIn = projIn;
+        function rebuildCatSelect() {
+            catSel.empty();
+            getActiveCats().forEach(function(c){
+                var o = catSel.createEl('option',{text:c.l}); o.value = c.v;
+            });
+            if(p.state.cat) catSel.value = p.state.cat;
+        }
+        rebuildCatSelect();
+        self._rebuildCatSelect = rebuildCatSelect;
+
+        catSel.onchange = function(){ p.state.cat = catSel.value; rebuildSubSuggestions(); };
+
+        // ردیف chips مدیریت دسته‌بندی
+        var catChips = catField.createEl('div',{cls:'pj-chips'});
+
+        var catAddChip = catChips.createEl('button',{cls:'pj-chip'});
+        catAddChip.innerHTML = '<span>+</span> دسته‌ی جدید';
+        catAddChip.onclick = function(){
+            var inp = catField.createEl('input',{cls:'pj-chip-inp'});
+            inp.placeholder = 'مثلاً 🎮 بازی'; inp.focus();
+            var commit = async function(){
+                var newL = inp.value.trim(); inp.remove(); if(!newL) return;
+                var newV = newL.replace(/\s+/g,'-').replace(/[^\w؀-ۿ\-]/g,'') || ('cat-'+Date.now());
+                var cats = getActiveCats().slice();
+                cats.push({v:newV, l:newL, items:[]});
+                p.settings.categories = cats; p.state.cat = newV;
+                await p._saveSettings();
+                rebuildCatSelect(); catSel.value = newV; rebuildSubSuggestions();
+            };
+            inp.onblur = commit;
+            inp.onkeydown = function(e){ if(e.key==='Enter') inp.blur(); if(e.key==='Escape'){ inp.remove(); } };
+        };
+
+        var catRenameChip = catChips.createEl('button',{cls:'pj-chip'});
+        catRenameChip.innerHTML = '✏️ ویرایش نام';
+        catRenameChip.onclick = function(){
+            var cat = getCurCat(); if(!cat) return;
+            var inp = catField.createEl('input',{cls:'pj-chip-inp'});
+            inp.value = cat.l; inp.placeholder = 'نام جدید...'; inp.focus(); inp.select();
+            var commit = async function(){
+                var newL = inp.value.trim(); inp.remove();
+                if(!newL || newL===cat.l) return;
+                cat.l = newL; await p._saveSettings(); rebuildCatSelect();
+            };
+            inp.onblur = commit;
+            inp.onkeydown = function(e){ if(e.key==='Enter') inp.blur(); if(e.key==='Escape'){ inp.remove(); } };
+        };
+
+        var catDelChip = catChips.createEl('button',{cls:'pj-chip pj-chip--danger'});
+        catDelChip.innerHTML = '🗑️ حذف دسته';
+        catDelChip.onclick = async function(){
+            var curV = catSel.value;
+            p.settings.categories = getActiveCats().filter(function(c){ return c.v !== curV; });
+            if(p.state.cat===curV && p.settings.categories.length) p.state.cat = p.settings.categories[0].v;
+            await p._saveSettings();
+            rebuildCatSelect(); rebuildSubSuggestions();
+            new obsidian.Notice('🗑️ دسته‌بندی حذف شد', 2000);
+        };
+
+        // ۲. زیرمجموعه — text input با datalist (پیشنهاد خودکار + ذخیره‌ی موارد جدید)
+        var subField = formCard.createEl('div',{cls:'pj-field'});
+        subField.createEl('label',{text:'زیرمجموعه', cls:'pj-field-label'});
+
+        var subListId = 'pj-sub-datalist';
+        var subDatalist = document.createElement('datalist');
+        subDatalist.id = subListId;
+        subField.appendChild(subDatalist);
+
+        var subInp = subField.createEl('input',{cls:'pj-field-input'});
+        subInp.type = 'text';
+        subInp.placeholder = 'بنویس یا از پیشنهادات انتخاب کن...';
+        subInp.setAttribute('list', subListId);
+        self._subInp = subInp;
+        self._projSel = null; // دیگه select نیست
+
+        function rebuildSubSuggestions() {
+            // پاک کردن پیشنهادات قبلی
+            while(subDatalist.firstChild) subDatalist.removeChild(subDatalist.firstChild);
+            var cat = getCurCat();
+            var items = (cat && cat.items) ? cat.items : [];
+            items.forEach(function(item){
+                var opt = document.createElement('option'); opt.value = item;
+                subDatalist.appendChild(opt);
+            });
+            // اگه مقدار فعلی state زیر همین دسته نیست، پاک کن
+            if(document.activeElement !== subInp)
+                subInp.value = (p.state.project && p.state.project !== '—') ? p.state.project : '';
+        }
+        rebuildSubSuggestions();
+        self._rebuildSubSelect = rebuildSubSuggestions;
+        self._rebuildProjSelect = rebuildSubSuggestions;
+
+        subInp.oninput = function(){ p.state.project = subInp.value.trim() || '—'; };
+
+        // وقتی از فوکوس خارج می‌شه → اگه مقدار جدیده ذخیره کن
+        subInp.onblur = async function(){
+            var newName = subInp.value.trim();
+            p.state.project = newName || '—';
+            if(!newName) return;
+            var cat = getCurCat();
+            if(cat && cat.items && cat.items.indexOf(newName)===-1){
+                cat.items.push(newName);
+                await p._saveSettings();
+                rebuildSubSuggestions();
+            }
+        };
 
         // ۳. توضیحات
         var taskField = formCard.createEl('div',{cls:'pj-field pj-field--last'});
         taskField.createEl('label',{text:'توضیحات', cls:'pj-field-label'});
         var taskIn = taskField.createEl('input',{cls:'pj-field-input'});
         taskIn.type='text'; taskIn.placeholder='این سشن رو در یه جمله توضیح بده...';
-        taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, projIn.value, catSel.value); };
+        taskIn.onkeydown = function(e){ if(e.key==='Enter'&&!p.state.running) p.startSession(taskIn.value, p.state.project || '—', catSel.value); };
         taskIn.oninput = function(){ p.state.task = taskIn.value.trim()||'—'; };
         self._taskIn = taskIn;
 
@@ -573,8 +681,8 @@ class PomodoroView extends obsidian.ItemView {
         // اینپوت‌ها
         if(this._taskIn && document.activeElement !== this._taskIn)
             this._taskIn.value = st.task || '';
-        if(this._projIn && document.activeElement !== this._projIn)
-            this._projIn.value = (st.project && st.project !== '—') ? st.project : '';
+        if(this._subInp && document.activeElement !== this._subInp)
+            this._subInp.value = (st.project && st.project !== '—') ? st.project : '';
         if(this._catSel && st.cat)
             this._catSel.value = st.cat;
     }
@@ -625,6 +733,11 @@ class PomodoroPlugin extends obsidian.Plugin {
         this.settings     = Object.assign({}, DEFAULT_SETTINGS, (saved && saved.settings) || {});
         this.state        = Object.assign({}, defaultState, (saved && saved.state) || {});
         this.soundSettings = (saved && saved.sounds) || {};
+
+        // مهاجرت: اطمینان از اینکه همه دسته‌ها آرایه‌ی items دارن
+        if(this.settings.categories){
+            this.settings.categories.forEach(function(c){ if(!c.items) c.items = []; });
+        }
 
         // اگه موقع بسته شدن، تایمر داشت اجرا می‌شد → زمان واقعی گذشته رو حساب کن
         if(this.state.running && !this.state.paused && this.state.startWall){
@@ -1032,42 +1145,27 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
             .setName('مدت سشن کاری')
             .setDesc('به دقیقه — پیش‌فرض: ۲۵')
             .addText(function(t){
-                t.inputEl.type = 'number';
-                t.inputEl.min  = '1';
-                t.inputEl.max  = '120';
+                t.inputEl.type = 'number'; t.inputEl.min = '1'; t.inputEl.max = '120';
                 t.setValue(String(cfg.workDuration));
-                t.onChange(async function(v){
-                    cfg.workDuration = Math.max(1, parseInt(v)||25);
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.workDuration = Math.max(1, parseInt(v)||25); await p._saveSettings(); });
             });
 
         new obsidian.Setting(el)
             .setName('مدت استراحت کوتاه')
             .setDesc('به دقیقه — پیش‌فرض: ۵')
             .addText(function(t){
-                t.inputEl.type = 'number';
-                t.inputEl.min  = '1';
-                t.inputEl.max  = '60';
+                t.inputEl.type = 'number'; t.inputEl.min = '1'; t.inputEl.max = '60';
                 t.setValue(String(cfg.shortBreak));
-                t.onChange(async function(v){
-                    cfg.shortBreak = Math.max(1, parseInt(v)||5);
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.shortBreak = Math.max(1, parseInt(v)||5); await p._saveSettings(); });
             });
 
         new obsidian.Setting(el)
             .setName('مدت استراحت بلند')
             .setDesc('به دقیقه — پیش‌فرض: ۱۵')
             .addText(function(t){
-                t.inputEl.type = 'number';
-                t.inputEl.min  = '1';
-                t.inputEl.max  = '120';
+                t.inputEl.type = 'number'; t.inputEl.min = '1'; t.inputEl.max = '120';
                 t.setValue(String(cfg.longBreak));
-                t.onChange(async function(v){
-                    cfg.longBreak = Math.max(1, parseInt(v)||15);
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.longBreak = Math.max(1, parseInt(v)||15); await p._saveSettings(); });
             });
 
         new obsidian.Setting(el)
@@ -1075,10 +1173,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
             .setDesc('بعد از اتمام سشن کاری، استراحت رو خودکار شروع کن')
             .addToggle(function(t){
                 t.setValue(cfg.autoStartBreak);
-                t.onChange(async function(v){
-                    cfg.autoStartBreak = v;
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.autoStartBreak = v; await p._saveSettings(); });
             });
 
         new obsidian.Setting(el)
@@ -1086,10 +1181,7 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
             .setDesc('بعد از اتمام استراحت، سشن کاری رو خودکار شروع کن')
             .addToggle(function(t){
                 t.setValue(cfg.autoStartWork);
-                t.onChange(async function(v){
-                    cfg.autoStartWork = v;
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.autoStartWork = v; await p._saveSettings(); });
             });
 
         // ── ژورنال ──
@@ -1100,22 +1192,15 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
             .setDesc('وقتی تایمر تموم شد، بدون سوال در نت روزانه ثبت کنه')
             .addToggle(function(t){
                 t.setValue(cfg.autoLog);
-                t.onChange(async function(v){
-                    cfg.autoLog = v;
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.autoLog = v; await p._saveSettings(); });
             });
 
         new obsidian.Setting(el)
             .setName('عنوان بخش پومودورو در نت روزانه')
             .setDesc('هدینگی که پلاگین دنبالش می‌گرده تا جدول رو پیدا کنه')
             .addText(function(t){
-                t.setValue(cfg.journalHeading);
-                t.inputEl.style.width = '100%';
-                t.onChange(async function(v){
-                    cfg.journalHeading = v.trim() || DEFAULT_SETTINGS.journalHeading;
-                    await p._saveSettings();
-                });
+                t.setValue(cfg.journalHeading); t.inputEl.style.width = '100%';
+                t.onChange(async function(v){ cfg.journalHeading = v.trim() || DEFAULT_SETTINGS.journalHeading; await p._saveSettings(); });
             });
 
         // ── صدا ──
@@ -1126,80 +1211,164 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
             .setDesc('یه صدای آروم برای اعلام پایان هر سشن (کار یا استراحت)')
             .addToggle(function(t){
                 t.setValue(cfg.bellOnComplete);
-                t.onChange(async function(v){
-                    cfg.bellOnComplete = v;
-                    await p._saveSettings();
-                });
+                t.onChange(async function(v){ cfg.bellOnComplete = v; await p._saveSettings(); });
             });
 
-        // ── دسته‌بندی‌ها ──
+        // ── دسته‌بندی‌ها — accordion دو ستونه ──
         el.createEl('h3', {text: '📋 دسته‌بندی‌ها'});
-        el.createEl('p', {
-            text: 'دسته‌هایی که توی منوی کشویی تایمر نشون داده می‌شن. می‌تونی ویرایش، حذف یا اضافه کنی.',
-            cls: 'setting-item-description'
-        });
 
-        if(!p.settings.categories || !p.settings.categories.length){
-            p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({}, c); });
+        if(!p.settings.categories || !p.settings.categories.length)
+            p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); });
+        p.settings.categories.forEach(function(c){ if(!c.items) c.items = []; });
+
+        var accList = el.createEl('div', {cls:'pj-acc-list'});
+        var openCats = new Set(); // کدوم دسته‌ها باز هستن
+        var catDrag  = { src: null };
+
+        function syncPanel() {
+            if(p.view && p.view._rebuildCatSelect) p.view._rebuildCatSelect();
+            if(p.view && p.view._rebuildSubSelect) p.view._rebuildSubSelect();
         }
 
-        var catList = el.createEl('div', {cls:'pj-cat-list'});
+        function renderAcc() {
+            accList.empty();
+            p.settings.categories.forEach(function(cat, catIdx) {
+                var isOpen = openCats.has(cat.v);
 
-        function renderCatList() {
-            catList.empty();
-            p.settings.categories.forEach(function(cat, idx){
-                var row = catList.createEl('div', {cls:'pj-cat-row'});
+                // ── accordion item ──
+                var item = accList.createEl('div', {cls: 'pj-acc-item' + (isOpen ? ' pj-acc-open' : '')});
+                item.draggable = true;
 
-                var labelInp = row.createEl('input', {cls:'pj-cat-label-inp'});
-                labelInp.value = cat.l;
-                labelInp.placeholder = 'مثلاً 📖 مطالعه کتاب';
-                labelInp.onchange = async function(){
-                    cat.l = labelInp.value.trim() || cat.l;
-                    await p._saveSettings();
+                item.addEventListener('dragstart', function(e) {
+                    catDrag.src = catIdx; e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', 'cat');
+                    setTimeout(function(){ item.classList.add('pj-dragging'); }, 0);
+                });
+                item.addEventListener('dragend', function() {
+                    item.classList.remove('pj-dragging');
+                    accList.querySelectorAll('.pj-drag-over').forEach(function(el){ el.classList.remove('pj-drag-over'); });
+                });
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+                    if(catDrag.src !== catIdx) item.classList.add('pj-drag-over');
+                });
+                item.addEventListener('dragleave', function(e) {
+                    if(!item.contains(e.relatedTarget)) item.classList.remove('pj-drag-over');
+                });
+                item.addEventListener('drop', async function(e) {
+                    e.preventDefault(); e.stopPropagation(); item.classList.remove('pj-drag-over');
+                    var src = catDrag.src; if(src === null || src === catIdx) return;
+                    var moved = p.settings.categories.splice(src, 1)[0];
+                    p.settings.categories.splice(catIdx, 0, moved);
+                    await p._saveSettings(); renderAcc(); syncPanel();
+                });
+
+                // ── header ──
+                var hdr = item.createEl('div', {cls: 'pj-acc-hdr'});
+
+                // ▶/▼ chevron (کلیک برای باز/بستن)
+                var chevron = hdr.createEl('button', {cls: 'pj-acc-chevron'});
+                chevron.innerHTML = isOpen ? '▼' : '▶';
+                chevron.onclick = function() {
+                    if(isOpen) openCats.delete(cat.v); else openCats.add(cat.v);
+                    renderAcc();
                 };
 
-                var delBtn = row.createEl('button', {text:'🗑️', cls:'pj-cat-del-btn'});
-                delBtn.title = 'حذف این دسته';
-                delBtn.onclick = async function(){
-                    p.settings.categories.splice(idx, 1);
-                    await p._saveSettings();
-                    renderCatList();
+                // نام دسته (editable)
+                var nameInp = hdr.createEl('input', {cls: 'pj-acc-name'});
+                nameInp.value = cat.l; nameInp.placeholder = 'نام دسته‌بندی';
+                nameInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                nameInp.onchange = async function() {
+                    var v = nameInp.value.trim(); if(!v) return;
+                    cat.l = v; await p._saveSettings(); syncPanel();
                 };
+
+                // badge تعداد زیرمجموعه‌ها
+                if(cat.items && cat.items.length){
+                    hdr.createEl('span', {cls: 'pj-acc-badge', text: fa(String(cat.items.length))});
+                }
+
+                // grip + delete
+                var grip = hdr.createEl('span', {cls: 'pj-drag-grip', text: '⠿'});
+                grip.title = 'بکش برای تغییر ترتیب';
+
+                var del = hdr.createEl('button', {cls: 'pj-acc-del'});
+                del.innerHTML = '×'; del.title = 'حذف';
+                del.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                del.onclick = async function() {
+                    p.settings.categories.splice(catIdx, 1);
+                    openCats.delete(cat.v);
+                    await p._saveSettings(); renderAcc(); syncPanel();
+                };
+
+                if(!isOpen) return; // collapsed — فقط header
+
+                // ── body — chip tags ──
+                var body = item.createEl('div', {cls: 'pj-acc-body'});
+                var tags = body.createEl('div', {cls: 'pj-tags'});
+
+                if(!cat.items) cat.items = [];
+                cat.items.forEach(function(sub, subIdx) {
+                    // رنگِ chip بر اساس ایندکس می‌چرخه (مثل Notion) — c0..c3
+                    var tag = tags.createEl('span', {cls: 'pj-tag pj-tag-c' + (subIdx % 4)});
+                    tag.createEl('span', {cls: 'pj-tag-text', text: sub});
+                    var x = tag.createEl('button', {cls: 'pj-tag-x', text: '×'});
+                    x.onclick = async function() {
+                        cat.items.splice(subIdx, 1);
+                        await p._saveSettings(); renderAcc(); syncPanel();
+                    };
+                });
+
+                // input افزودن زیرمجموعه
+                var addInp = tags.createEl('input', {cls: 'pj-tag-inp'});
+                addInp.placeholder = '+ اضافه کن…';
+                var _adding = false; // جلوگیری از double-save (blur بعد از Enter)
+                var doAdd = async function() {
+                    if(_adding) return;
+                    var v = addInp.value.trim(); if(!v) return;
+                    _adding = true;
+                    if(!cat.items) cat.items = [];
+                    if(cat.items.indexOf(v) === -1) cat.items.push(v);
+                    addInp.value = '';
+                    openCats.add(cat.v);
+                    await p._saveSettings(); renderAcc(); syncPanel();
+                };
+                addInp.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); doAdd(); } };
+                // ذخیره هنگام کلیک جای دیگه (blur)
+                addInp.onblur = function(){ doAdd(); };
+                addInp.addEventListener('mousedown', function(e){ e.stopPropagation(); });
             });
 
-            // دکمه‌ی افزودن
-            var addRow = catList.createEl('div', {cls:'pj-cat-add-row'});
-            var addInp = addRow.createEl('input', {cls:'pj-cat-label-inp'});
-            addInp.placeholder = '+ دسته‌ی جدید (مثلاً 🎮 بازی)';
-            var addBtn = addRow.createEl('button', {text:'افزودن', cls:'pj-cat-add-btn'});
-            addBtn.onclick = async function(){
-                var label = addInp.value.trim();
-                if(!label) return;
-                var val = label.replace(/\s+/g,'-').replace(/[^\w؀-ۿ\-]/g,'') || ('cat-' + Date.now());
-                p.settings.categories.push({ v: val, l: label });
-                await p._saveSettings();
-                addInp.value = '';
-                renderCatList();
+            // ── افزودن دسته‌ی جدید ──
+            var addCat = accList.createEl('div', {cls: 'pj-acc-add-cat'});
+            var addCatInp = addCat.createEl('input', {cls: 'pj-cat-label-inp'});
+            addCatInp.placeholder = 'دسته‌ی جدید… (مثلاً 🎮 بازی)';
+            var addCatBtn = addCat.createEl('button', {text: '+ افزودن', cls: 'pj-cat-add-btn'});
+            addCatBtn.onclick = async function() {
+                var label = addCatInp.value.trim(); if(!label) return;
+                var val = label.replace(/\s+/g,'-').replace(/[^\w؀-ۿ\-]/g,'') || ('cat-'+Date.now());
+                p.settings.categories.push({v:val, l:label, items:[]});
+                openCats.add(val); addCatInp.value = '';
+                await p._saveSettings(); renderAcc(); syncPanel();
             };
-            addInp.onkeydown = function(e){ if(e.key === 'Enter') addBtn.click(); };
+            addCatInp.onkeydown = function(e){ if(e.key==='Enter') addCatBtn.click(); };
         }
-
-        renderCatList();
+        renderAcc();
 
         new obsidian.Setting(el)
             .setName('بازگشت به دسته‌های پیش‌فرض')
-            .setDesc('لیست دسته‌بندی‌ها رو به حالت اولیه برگردون')
+            .setDesc('همه‌ی دسته‌بندی‌ها و زیرمجموعه‌هاشون پاک و به حالت اولیه برمی‌گردن')
             .addButton(function(b){
                 b.setButtonText('ریست دسته‌ها').setWarning();
                 b.onClick(async function(){
-                    p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({}, c); });
-                    await p._saveSettings();
-                    renderCatList();
+                    p.settings.categories = DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); });
+                    openCats.clear();
+                    await p._saveSettings(); renderAcc(); syncPanel();
                     new obsidian.Notice('✅ دسته‌بندی‌ها به پیش‌فرض برگشت', 3000);
                 });
             });
 
-        // ── دکمه‌ی ریست کل تنظیمات ──
+        // ── بازنشانی ──
         el.createEl('h3', {text: '⚙️ بازنشانی'});
         new obsidian.Setting(el)
             .setName('بازگشت به تنظیمات پیش‌فرض')
@@ -1208,10 +1377,10 @@ class PomodoroSettingTab extends obsidian.PluginSettingTab {
                 b.setButtonText('ریست کامل').setWarning();
                 b.onClick(async function(){
                     p.settings = Object.assign({}, DEFAULT_SETTINGS, {
-                        categories: DEFAULT_CATEGORIES.map(function(c){ return Object.assign({}, c); })
+                        categories: DEFAULT_CATEGORIES.map(function(c){ return Object.assign({items:[]}, c); })
                     });
-                    await p._saveSettings();
-                    renderCatList();
+                    openCats.clear();
+                    await p._saveSettings(); renderAcc(); syncPanel();
                     new obsidian.Notice('✅ تنظیمات به پیش‌فرض برگشت', 3000);
                 });
             });

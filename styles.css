@@ -503,6 +503,10 @@
 }
 
 /* ══════════════════════════════════════════════
+   accordion دسته‌بندی‌ها — دو ستونه
+   ══════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════
    مدیریت دسته‌بندی در settings
    ══════════════════════════════════════════════ */
 .pj-cat-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
@@ -523,13 +527,246 @@
 .pj-cat-del-btn:hover { opacity: 1; }
 .pj-cat-add-btn {
     font-family: inherit; font-size: 12px; font-weight: 600;
-    padding: 5px 12px; border-radius: 8px;
+    padding: 5px 12px; border-radius: 20px;
     border: 1px solid var(--interactive-accent);
-    background: none; color: var(--interactive-accent);
-    cursor: pointer; white-space: nowrap; transition: background .15s;
+    background: transparent;
+    color: var(--interactive-accent);
+    cursor: pointer; white-space: nowrap; transition: all .15s;
 }
 .pj-cat-add-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* ══════════════════════════════════════════════
+   مدیریت دسته‌بندی در پنل — chips
+   ══════════════════════════════════════════════ */
+.pj-field--cat { padding-bottom: 8px; }
+
+.pj-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 7px;
+}
+.pj-chip {
+    background: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    line-height: 1.5;
+}
+.pj-chip:hover {
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+.pj-chip--danger:hover {
+    color: var(--text-error);
+    border-color: var(--text-error);
+}
+.pj-chip-inp {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    font-family: inherit;
+    font-size: 12.5px;
+    border: 1px solid var(--interactive-accent);
+    border-radius: 6px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    padding: 4px 8px;
+    direction: rtl;
+    outline: none;
+    box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════════════
+   accordion — Notion Dark (theme-aware: light + dark)
+   ══════════════════════════════════════════════ */
+.pj-acc-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 16px;
+    margin-bottom: 10px;
+    align-items: start;
+}
+
+/* reset استایلِ پیش‌فرضِ دکمه‌های اوبسیدین داخل accordion (حذف باکس/سایه) */
+.pj-acc-hdr button,
+.pj-tag-x,
+.pj-acc-add-cat button {
+    box-shadow: none !important;
+    height: auto;
+}
+.pj-acc-hdr button:hover,
+.pj-tag-x:hover {
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+/* هر آیتم accordion — رادیوس گرد مثل Notion */
+.pj-acc-item {
+    border-radius: 6px;
+    overflow: hidden;
+    transition: background .15s;
+}
+/* وقتی باز هست، همون جای خودش بمونه — فقط بلندتر میشه */
+.pj-acc-item.pj-drag-over {
+    outline: 1px solid var(--interactive-accent);
+    background: var(--background-modifier-hover);
+}
+
+/* header */
+.pj-acc-hdr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    height: 38px;
+    cursor: default;
+    direction: rtl;
+    border-radius: 6px;
+    transition: background .15s;
+}
+.pj-acc-hdr:hover { background: var(--background-modifier-hover); }
+
+.pj-acc-chevron {
+    background: none !important; border: none;
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer; padding: 0 3px; flex-shrink: 0;
+    line-height: 1;
+    transition: color .15s;
+}
+.pj-acc-chevron:hover { color: var(--text-normal); }
+
+.pj-acc-name {
+    flex: 1;
+    font-family: inherit; font-size: 13.5px; font-weight: 500;
+    border: none; background: none;
+    color: var(--text-normal);
+    padding: 0; outline: none;
+    direction: rtl; min-width: 0;
+}
+.pj-acc-name:focus { border-bottom: 1px solid var(--interactive-accent); }
+
+/* badge — کهربایی (روی هر دو تم خوانا) */
+.pj-acc-badge {
+    font-size: 10.5px; font-weight: 600;
+    background: rgba(245,158,11,.14);
+    border-radius: 20px; padding: 1px 8px;
+    flex-shrink: 0;
+}
+.theme-dark  .pj-acc-badge { color: #fcd34d; }
+.theme-light .pj-acc-badge { color: #b45309; }
+
+.pj-acc-del {
+    background: none !important; border: none;
+    font-size: 15px; line-height: 1;
+    color: var(--text-faint);
+    cursor: pointer; padding: 0 2px;
+    transition: color .15s; flex-shrink: 0;
+}
+.pj-acc-del:hover { color: var(--text-error); }
+
+/* body — chip tags */
+.pj-acc-body {
+    margin: 0 0 4px 0;
+    background: var(--background-secondary);
+    border-radius: 0 0 6px 6px;
+    padding: 8px 10px 10px;
+}
+
+.pj-tags {
+    display: flex; flex-wrap: wrap; gap: 5px;
+    direction: rtl; align-items: center;
+}
+
+/* chip پایه */
+.pj-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    border-radius: 20px;
+    padding: 3px 10px 3px 6px;
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    transition: filter .15s;
+}
+.pj-tag:hover { filter: brightness(1.08); }
+.pj-tag-text { line-height: 1.3; }
+.pj-tag-x {
+    background: none; border: none;
+    font-size: 13px; line-height: 1;
+    color: inherit; cursor: pointer; padding: 0;
+    opacity: .5; transition: opacity .12s;
+}
+.pj-tag-x:hover { opacity: 1; }
+
+/* رنگ‌های چرخشی chip — مثل Notion (کهربایی/ایندیگو/سبز/صورتی) */
+.pj-tag-c0 { background: rgba(245,158,11,.15); }
+.pj-tag-c1 { background: rgba(99,102,241,.15); }
+.pj-tag-c2 { background: rgba(34,197,94,.14); }
+.pj-tag-c3 { background: rgba(236,72,153,.14); }
+/* متنِ chip — تیره‌تر در تم روشن، روشن‌تر در تم تیره (برای کنتراست) */
+.theme-dark  .pj-tag-c0 { color: #fcd34d; }
+.theme-dark  .pj-tag-c1 { color: #a5b4fc; }
+.theme-dark  .pj-tag-c2 { color: #86efac; }
+.theme-dark  .pj-tag-c3 { color: #f9a8d4; }
+.theme-light .pj-tag-c0 { color: #b45309; }
+.theme-light .pj-tag-c1 { color: #4338ca; }
+.theme-light .pj-tag-c2 { color: #15803d; }
+.theme-light .pj-tag-c3 { color: #be185d; }
+
+.pj-tag-inp {
+    border: none; background: none; outline: none;
+    font-family: inherit; font-size: 12px;
+    color: var(--text-normal); direction: rtl;
+    min-width: 90px; max-width: 150px; padding: 3px 0;
+}
+.pj-tag-inp::placeholder { color: var(--text-faint); }
+
+/* افزودن دسته‌ی جدید — هر دو ستون */
+.pj-acc-add-cat {
+    display: flex; gap: 6px;
+    padding: 8px 0 2px;
+    direction: rtl;
+    grid-column: 1 / -1;
+}
+
+/* ══ drag & drop ══ */
+.pj-drag-grip {
+    cursor: grab;
+    color: var(--text-faint);
+    font-size: 15px;
+    padding: 0 4px 0 0;
+    user-select: none;
+    opacity: 0.35;
+    flex-shrink: 0;
+    transition: opacity .15s;
+    line-height: 1;
+}
+.pj-drag-grip:hover { opacity: 0.9; }
+.pj-drag-grip--sm { font-size: 12px; padding: 0 3px 0 0; }
+
+.pj-dragging {
+    opacity: 0.4;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.pj-acc-item.pj-drag-over-dup {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 25%, transparent);
+}
+.pj-hier-item.pj-drag-over {
     background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+    border-radius: 5px;
+    outline: 1px dashed var(--interactive-accent);
 }
 
 /* ══ دکمه‌ی رد استراحت ══ */
